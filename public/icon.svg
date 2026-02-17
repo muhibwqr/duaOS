@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="#e2e8f0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Prayer hands: two hands joined, fingers up. Left hand. -->
+  <path d="M20 4 L16 10 L16 20 L20 26 L20 56 L28 60 L28 26 L32 20 L32 10 L28 4" />
+  <!-- Right hand -->
+  <path d="M44 4 L48 10 L48 20 L44 26 L44 56 L36 60 L36 26 L32 20 L32 10 L36 4" />
+</svg>
