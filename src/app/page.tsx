@@ -303,7 +303,7 @@ export default function Home() {
             </button>
             <button
               type="button"
-              onClick={handleSearch}
+              onClick={() => void handleSearch()}
               disabled={isSearching}
               className="shrink-0 p-1.5 text-emerald-400/90 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-md transition-colors disabled:opacity-50"
               aria-label="Search"
