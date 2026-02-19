@@ -58,6 +58,8 @@ export const searchBodySchema = z.object({
   query: safeString(MAX_QUERY_LENGTH),
   intent: z.enum(["problem", "refine", "goal"]).optional(),
   edition: z.union([z.enum(HADITH_EDITIONS), z.literal("")]).optional().default(""),
+  /** When false, skip LLM selection step (e.g. for debugging). Default true. */
+  llm_filter: z.boolean().optional().default(true),
 });
 
 export const refineBodySchema = z.object({

@@ -5,6 +5,7 @@ import { searchBodySchema, HADITH_EDITIONS } from "@/lib/validation";
 import { rateLimitSearch } from "@/lib/rate-limit";
 import { enrichQuery } from "@/lib/query-enrichment";
 import { reRankForDuaIntent, type MatchRow } from "@/lib/rerank-dua-intent";
+import { selectRelevantDuas, applySelectedIds } from "@/lib/llm-select-dua";
 
 export async function POST(req: Request) {
   try {
@@ -37,7 +38,8 @@ export async function POST(req: Request) {
       const msg = parsed.error.flatten().formErrors[0] ?? "Invalid request.";
       return NextResponse.json({ error: msg }, { status: 400 });
     }
-    const { query, edition, intent } = parsed.data;
+    const { query, edition, intent, llm_filter } = parsed.data;
+    const trimmedQuery = query.trim();
     const editionStr = String(edition ?? "");
     const preferredEdition =
       editionStr.length > 0 && HADITH_EDITIONS.includes(editionStr as (typeof HADITH_EDITIONS)[number])
@@ -55,8 +57,6 @@ export async function POST(req: Request) {
       input: enrichedQuery,
     });
     const queryEmbedding = embeddingData.embedding;
-
-    const trimmedQuery = query.trim();
     const minSimilarity = 0.35;
     const dynamicThreshold = trimmedQuery.length > 30 ? 0.3 : Math.max(0.3, 0.4 - trimmedQuery.length / 200);
     const matchCount = 25;
@@ -93,7 +93,6 @@ export async function POST(req: Request) {
     }
     let quranVerses = reranked.filter((m) => m.metadata?.type === "quran");
 
-    // Only return hadith and Quran results that have a clear source (something that actually happened / can be cited)
     const hasHadithSource = (m: MatchRow) => typeof m.metadata?.reference === "string" && m.metadata.reference.trim() !== "" || typeof m.metadata?.edition === "string";
     const hasQuranSource = (m: MatchRow) => typeof m.metadata?.reference === "string" && m.metadata.reference.trim() !== "" || typeof m.metadata?.surah === "string";
     hadiths = hadiths.filter(hasHadithSource);
@@ -103,10 +102,11 @@ export async function POST(req: Request) {
     const needHadith = hadiths.length === 0;
     const needQuran = quranVerses.length === 0;
 
+    const fallbackBase = { query_embedding: queryEmbedding };
     const [nameFallbackRes, hadithFallbackRes, quranFallbackRes] = await Promise.all([
       needName
         ? supabase.rpc("match_documents", {
-            query_embedding: queryEmbedding,
+            ...fallbackBase,
             match_threshold: 0,
             match_count: 1,
             filter_metadata: { type: "name" },
@@ -114,7 +114,7 @@ export async function POST(req: Request) {
         : Promise.resolve({ data: [] }),
       needHadith
         ? supabase.rpc("match_documents", {
-            query_embedding: queryEmbedding,
+            ...fallbackBase,
             match_threshold: 0,
             match_count: 10,
             filter_metadata: preferredEdition ? { type: "hadith", edition: preferredEdition } : { type: "hadith" },
@@ -122,7 +122,7 @@ export async function POST(req: Request) {
         : Promise.resolve({ data: [] }),
       needQuran
         ? supabase.rpc("match_documents", {
-            query_embedding: queryEmbedding,
+            ...fallbackBase,
             match_threshold: 0,
             match_count: 5,
             filter_metadata: { type: "quran" },
@@ -146,6 +146,20 @@ export async function POST(req: Request) {
     if (intent === "problem" && hadiths.length > 1) {
       hadiths = [...hadiths].sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0));
     }
+
+    const hadithSlice = hadiths.slice(0, 8);
+    const quranSlice = quranVerses.slice(0, 6);
+    const selected = await selectRelevantDuas(trimmedQuery, hadithSlice, quranSlice, {
+      apiKey,
+      skip: !llm_filter,
+    });
+    const { hadiths: hadithsFiltered, quranVerses: quranFiltered } = applySelectedIds(
+      hadiths,
+      quranVerses,
+      selected
+    );
+    hadiths = hadithsFiltered;
+    quranVerses = quranFiltered;
 
     return NextResponse.json({
       name: nameResult,

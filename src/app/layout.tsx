@@ -23,8 +23,38 @@ const amiri = Amiri({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://duaos.com"),
   title: "DuaOS",
   description: "Match your intent to Allah's Names and refine your du'a.",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/logo-dark.png",
+  },
+  openGraph: {
+    title: "DuaOS",
+    description: "Match your intent to Allah's Names and refine your du'a.",
+    siteName: "DuaOS",
+    type: "website",
+    images: [
+      {
+        url: "/logo-dark.png",
+        width: 512,
+        height: 512,
+        alt: "DuaOS logo",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    title: "DuaOS",
+    description: "Match your intent to Allah's Names and refine your du'a.",
+    images: [
+      {
+        url: "/logo-dark.png",
+        alt: "DuaOS logo",
+      },
+    ],
+  },
 };
 
 export default function RootLayout({

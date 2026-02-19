@@ -774,15 +774,37 @@ export default function Home() {
               <p className="text-xs text-slate-500 font-github border-t border-slate-500/20 pt-3">
                 DuaOS connects your intention to verified sources: Names of Allah, hadith, and the Qur&apos;an (The Noble Quran, English).
               </p>
+              {refinedDua ? (
+                <div className="border-t border-slate-500/20 pt-3 mt-3">
+                  <p className="text-emerald-400/90 font-github not-italic text-sm mb-2">Refined du&apos;a</p>
+                  <p className="whitespace-pre-wrap text-sm text-slate-100 font-calligraphy leading-relaxed">{refinedDua}</p>
+                </div>
+              ) : null}
             </div>
-            <Button
-              className="mt-4 w-full font-github"
-              variant="outline"
-              size="sm"
-              onClick={() => setSourcesPopupOpen(false)}
-            >
-              Close
-            </Button>
+            <div className="mt-4 flex gap-2">
+              {!refinedDua && (
+                <Button
+                  className="flex-1 font-github border-emerald-500/40 text-emerald-200 hover:bg-emerald-600/30"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSourcesPopupOpen(false);
+                    void handleRefine();
+                  }}
+                  disabled={isRefining}
+                >
+                  {isRefining ? "Refining…" : "Refine into du'a"}
+                </Button>
+              )}
+              <Button
+                className={`font-github ${refinedDua ? "w-full" : "flex-1"}`}
+                variant="outline"
+                size="sm"
+                onClick={() => setSourcesPopupOpen(false)}
+              >
+                Close
+              </Button>
+            </div>
           </div>
         </div>
       )}
