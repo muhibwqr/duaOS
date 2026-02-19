@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { toPng } from "html-to-image";
+import ReactMarkdown from "react-markdown";
 import { ArrowRight, CheckCircle2, ChevronDown, Copy, Mic, Plus, Share2, Trash2, X } from "lucide-react";
 import { Header } from "@/components/Header";
 import { KofiBanner } from "@/components/KofiBanner";
@@ -11,6 +12,25 @@ import { DuaShareCard } from "@/components/DuaShareCard";
 import { HADITH_EDITIONS, HADITH_EDITION_LABELS, MAX_HADITH_CONTEXT_LENGTH } from "@/lib/validation";
 import { localMatch } from "@/lib/local-match";
 import namesOfAllah from "@/data/names-of-allah.json";
+
+/** Strip markdown to plain text for share card image (reliable PNG capture). */
+function stripMarkdownForShare(text: string): string {
+  return text
+    .replace(/\*\*([^*]*)\*\*/g, "$1")
+    .replace(/\*([^*]*)\*/g, "$1")
+    .replace(/^#+\s*/gm, "")
+    .trim();
+}
+
+/** Extract the "personal du'a" section (section 3) from refined output for the share card. */
+function extractPersonalDua(refinedDua: string): string {
+  const stripped = stripMarkdownForShare(refinedDua);
+  const section3 = stripped.match(/3\.\s*A personalized du'a[^\n]*\n([\s\S]*?)(?=\n\s*4\.|$)/i);
+  if (section3?.[1]) return section3[1].trim();
+  const afterPersonal = stripped.match(/personal(?:ized)?\s*du'a[^\n]*\n([\s\S]*?)(?=\n\s*4\.|\n\s*When to make|$)/i);
+  if (afterPersonal?.[1]) return afterPersonal[1].trim();
+  return stripped.slice(0, 1200);
+}
 
 const MUHIB_URL = "https://muhibwaqar.com";
 const HADITH_EDITION_STORAGE_KEY = "duaos-hadith-edition";
@@ -124,6 +144,75 @@ function removeFromFavorites(id: string) {
   return list;
 }
 
+const DUAOS_EXPORT_VERSION = 1;
+
+/** Serialize library + favorites to DuaOS JSON format for import by others. */
+function exportLibraryAsDuaOSJson(library: LibraryEntry[], favorites: FavoriteItem[]): string {
+  const entries: { dua: string; name?: string; at: string }[] = [
+    ...[...favorites].reverse().map((f) => ({ dua: f.dua, name: f.nameOfAllah, at: f.addedAt })),
+    ...[...library].reverse().map((e) => ({ dua: e.dua, name: e.name, at: e.at })),
+  ];
+  return JSON.stringify({ duaos: "library", version: DUAOS_EXPORT_VERSION, entries });
+}
+
+/** Parse pasted/file content: DuaOS JSON or plain-text list. Returns entries to merge or null on failure. */
+function parseDuaOSImport(raw: string): LibraryEntry[] | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  try {
+    const data = JSON.parse(trimmed) as { duaos?: string; entries?: unknown[] };
+    if (data.duaos === "library" && Array.isArray(data.entries)) {
+      const entries: LibraryEntry[] = [];
+      for (const e of data.entries) {
+        const item = e as { dua?: unknown; name?: unknown; at?: unknown };
+        if (typeof item.dua !== "string" || !item.dua.trim()) continue;
+        entries.push({
+          dua: item.dua.trim(),
+          name: typeof item.name === "string" ? item.name.trim() || undefined : undefined,
+          at: typeof item.at === "string" ? item.at : new Date().toISOString(),
+        });
+      }
+      return entries;
+    }
+  } catch {
+    // not JSON, try plain-text format (My du'a list — Du'aOS, then blocks of du'a + "— Name")
+  }
+  const lines = trimmed.split("\n");
+  const entries: LibraryEntry[] = [];
+  let currentDua = "";
+  const flush = (name?: string) => {
+    if (currentDua.trim()) {
+      entries.push({ dua: currentDua.trim(), name: name?.trim() || undefined, at: new Date().toISOString() });
+    }
+    currentDua = "";
+  };
+  const isTitleLine = (line: string) => /du'a list/i.test(line) && /duaos/i.test(line);
+  for (const line of lines) {
+    if (line.startsWith("— ")) {
+      const name = line.slice(2).trim();
+      flush(name);
+    } else if (line.trim() === "") {
+      flush();
+    } else if (!isTitleLine(line)) {
+      currentDua += (currentDua ? "\n" : "") + line;
+    }
+  }
+  flush();
+  return entries.length > 0 ? entries : null;
+}
+
+/** Merge entries into library (one read, append, one write). */
+function mergeIntoLibrary(entries: LibraryEntry[]): void {
+  if (typeof window === "undefined" || entries.length === 0) return;
+  const raw = localStorage.getItem(LIBRARY_KEY);
+  const list: LibraryEntry[] = raw ? JSON.parse(raw) : [];
+  const now = new Date().toISOString();
+  for (const e of entries) {
+    list.push({ dua: e.dua, name: e.name, at: e.at || now });
+  }
+  localStorage.setItem(LIBRARY_KEY, JSON.stringify(list));
+}
+
 /** Fire-and-forget: store du'a on server for counter and similarity. Does not block UI. */
 function storeDuaOnServer(payload: {
   content: string;
@@ -178,6 +267,16 @@ export default function Home() {
     }
   });
   const [availableEditions, setAvailableEditions] = useState<string[]>([]);
+  const [selectedRefinedText, setSelectedRefinedText] = useState<string | null>(null);
+  const [savedSelectionFeedback, setSavedSelectionFeedback] = useState(false);
+  const refinedContentRef = useRef<HTMLDivElement | null>(null);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importInput, setImportInput] = useState("");
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importSuccess, setImportSuccess] = useState<string | null>(null);
+  const [exportToNotesFeedback, setExportToNotesFeedback] = useState<string | null>(null);
+  const [shareForDuaOSFeedback, setShareForDuaOSFeedback] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     setLibrary(getLibrary());
@@ -245,6 +344,7 @@ export default function Home() {
     if (overrideQuery) setQuery(overrideQuery);
     setSearchResult(null);
     setSearchError(null);
+    setRefinedDua("");
 
     const local = localMatch(q, namesOfAllah as { arabic: string; english: string; meaning: string; tags: string[] }[]);
 
@@ -405,6 +505,22 @@ export default function Home() {
     }
   }
 
+  function updateRefinedSelection() {
+    const sel = typeof window !== "undefined" ? window.getSelection() : null;
+    const node = refinedContentRef.current;
+    if (!node || !sel || sel.rangeCount === 0) {
+      setSelectedRefinedText(null);
+      return;
+    }
+    const range = sel.getRangeAt(0);
+    if (!range.intersectsNode(node)) {
+      setSelectedRefinedText(null);
+      return;
+    }
+    const text = sel.toString().trim();
+    setSelectedRefinedText(text || null);
+  }
+
   function handleSaveToLibrary() {
     const text = refinedDua.trim();
     if (!text) return;
@@ -417,6 +533,17 @@ export default function Home() {
       hadithSnippet: searchResult?.hadith?.content,
       intent,
     });
+  }
+
+  function handleSaveSelectionToLibrary() {
+    const text = selectedRefinedText?.trim();
+    if (!text) return;
+    saveToLibrary(text, searchResult?.name?.content);
+    setLibrary(getLibrary());
+    setSavedSelectionFeedback(true);
+    if (typeof window !== "undefined" && window.getSelection()) window.getSelection()?.removeAllRanges();
+    setSelectedRefinedText(null);
+    setTimeout(() => setSavedSelectionFeedback(false), 2000);
   }
 
   function handleAddToFavorites() {
@@ -507,6 +634,98 @@ export default function Home() {
     }
   }
 
+  async function handleExportToNotes() {
+    const text = getShareableDuaListText();
+    if (!text) return;
+    setExportToNotesFeedback(null);
+    const blob = new Blob([text], { type: "text/plain" });
+    const file = new File([blob], "duaos-duas.txt", { type: "text/plain" });
+    try {
+      if (typeof navigator !== "undefined" && navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: "My du'as", text: "Du'aOS library" });
+        setExportToNotesFeedback("Shared — pick Notes to save");
+      } else {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "duaos-duas.txt";
+        a.click();
+        URL.revokeObjectURL(a.href);
+        setExportToNotesFeedback("Downloaded");
+      }
+    } catch {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "duaos-duas.txt";
+      a.click();
+      URL.revokeObjectURL(a.href);
+      setExportToNotesFeedback("Downloaded");
+    }
+    setTimeout(() => setExportToNotesFeedback(null), 3000);
+  }
+
+  function handleShareForDuaOS() {
+    const json = exportLibraryAsDuaOSJson(library, favorites);
+    if (!json) return;
+    setShareForDuaOSFeedback(null);
+    const blob = new Blob([json], { type: "application/json" });
+    const file = new File([blob], "duaos-library.json", { type: "application/json" });
+    try {
+      if (typeof navigator !== "undefined" && navigator.share && navigator.canShare?.({ files: [file] })) {
+        navigator.share({ files: [file], title: "DuaOS library", text: "Send to another DuaOS user to import into their library." }).then(() => {
+          setShareForDuaOSFeedback("Shared");
+        }).catch(() => {
+          navigator.clipboard.writeText(json).then(() => setShareForDuaOSFeedback("Copied"));
+        });
+      } else {
+        navigator.clipboard.writeText(json).then(() => setShareForDuaOSFeedback("Copied — send to another user to import"));
+      }
+    } catch {
+      navigator.clipboard.writeText(json).then(() => setShareForDuaOSFeedback("Copied — send to another user to import"));
+    }
+    setTimeout(() => setShareForDuaOSFeedback(null), 4000);
+  }
+
+  function handleCopyForDuaOS() {
+    const one = { dua: refinedDua.trim(), name: searchResult?.name?.content, at: new Date().toISOString() };
+    const json = JSON.stringify({ duaos: "library", version: DUAOS_EXPORT_VERSION, entries: [one] });
+    navigator.clipboard.writeText(json).then(() => {
+      setCopyFeedbackId("duaos-copy");
+      setTimeout(() => setCopyFeedbackId(null), 2000);
+    });
+  }
+
+  function handleImportConfirm() {
+    setImportError(null);
+    setImportSuccess(null);
+    const raw = importInput.trim();
+    const entries = parseDuaOSImport(raw);
+    if (!entries || entries.length === 0) {
+      setImportError("No valid du'as found. Paste DuaOS JSON or the shared text list.");
+      return;
+    }
+    mergeIntoLibrary(entries);
+    setLibrary(getLibrary());
+    setImportSuccess(`Imported ${entries.length} du'a${entries.length === 1 ? "" : "s"}`);
+    setImportInput("");
+    setTimeout(() => {
+      setImportSuccess(null);
+      setImportModalOpen(false);
+    }, 2000);
+  }
+
+  function handleImportFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = typeof reader.result === "string" ? reader.result : "";
+      setImportInput(text);
+      setImportError(null);
+    };
+    reader.readAsText(f);
+    e.target.value = "";
+  }
+
   function openShareModal() {
     sharePngRef.current = null;
     setShareError(null);
@@ -519,10 +738,14 @@ export default function Home() {
     if (!text || !shareCardRef.current) return null;
     if (sharePngRef.current) return sharePngRef.current;
     setIsSharing(true);
+    const el = shareCardRef.current;
+    const prevVisibility = el.style.visibility;
     try {
-      const dataUrl = await toPng(shareCardRef.current, {
+      el.style.visibility = "visible";
+      await new Promise((r) => setTimeout(r, 100));
+      const dataUrl = await toPng(el, {
         width: 1080,
-        height: 1920,
+        height: 1080,
         pixelRatio: 2,
         cacheBust: true,
       });
@@ -530,8 +753,10 @@ export default function Home() {
       return dataUrl;
     } catch (e) {
       console.error("Share PNG failed:", e);
+      setShareError("Image generation failed. Try downloading or sharing the text instead.");
       return null;
     } finally {
+      el.style.visibility = prevVisibility;
       setIsSharing(false);
     }
   }
@@ -777,7 +1002,20 @@ export default function Home() {
               {refinedDua ? (
                 <div className="border-t border-slate-500/20 pt-3 mt-3">
                   <p className="text-emerald-400/90 font-github not-italic text-sm mb-2">Refined du&apos;a</p>
-                  <p className="whitespace-pre-wrap text-sm text-slate-100 font-calligraphy leading-relaxed">{refinedDua}</p>
+                  <div className="text-sm text-slate-100 font-calligraphy leading-relaxed">
+                    <ReactMarkdown
+                      components={{
+                        p: ({ children }) => <p className="mb-2 last:mb-0 text-sm">{children}</p>,
+                        h2: ({ children }) => <h2 className="text-base font-semibold mt-3 mb-1 first:mt-0">{children}</h2>,
+                        h3: ({ children }) => <h3 className="text-sm font-medium mt-2 mb-1">{children}</h3>,
+                        ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-0.5">{children}</ul>,
+                        ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-0.5">{children}</ol>,
+                        li: ({ children }) => <li className="ml-2">{children}</li>,
+                      }}
+                    >
+                      {refinedDua}
+                    </ReactMarkdown>
+                  </div>
                 </div>
               ) : null}
             </div>
@@ -915,16 +1153,42 @@ export default function Home() {
               <h2 className="text-sm font-semibold text-slate-100 font-github uppercase tracking-wider">
                 Favorites & Library
               </h2>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap justify-end">
+                <button
+                  type="button"
+                  onClick={() => setImportModalOpen(true)}
+                  className="text-xs font-github text-slate-400 hover:text-slate-200 transition-colors"
+                  aria-label="Import library"
+                >
+                  Import
+                </button>
                 {favorites.length + library.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => void handleShareDuaList()}
-                    className="text-xs font-github text-slate-400 hover:text-slate-200 transition-colors"
-                    aria-label="Share my du'a list"
-                  >
-                    {listShareFeedback === "shared" ? "Shared" : listShareFeedback === "copied" ? "Copied" : "Share list"}
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => void handleExportToNotes()}
+                      className="text-xs font-github text-slate-400 hover:text-slate-200 transition-colors"
+                      aria-label="Export to Notes"
+                    >
+                      {exportToNotesFeedback || "Export to Notes"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleShareForDuaOS()}
+                      className="text-xs font-github text-slate-400 hover:text-slate-200 transition-colors"
+                      aria-label="Share for DuaOS import"
+                    >
+                      {shareForDuaOSFeedback || "Share for DuaOS"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleShareDuaList()}
+                      className="text-xs font-github text-slate-400 hover:text-slate-200 transition-colors"
+                      aria-label="Share my du'a list"
+                    >
+                      {listShareFeedback === "shared" ? "Shared" : listShareFeedback === "copied" ? "Copied" : "Share list"}
+                    </button>
+                  </>
                 )}
                 <button
                   type="button"
@@ -1267,13 +1531,21 @@ export default function Home() {
           <>
             <div
               ref={shareCardRef}
-              className="fixed left-[-9999px] top-0 z-[-1]"
+              className="fixed left-0 top-0 w-[1080px] h-[1080px] overflow-hidden pointer-events-none invisible -z-10"
               aria-hidden
             >
               <DuaShareCard
-                nameOfAllah={searchResult?.name?.content}
-                refinedDua={refinedDua.trim()}
-                verifiedSource={hadithSourceLabel ?? undefined}
+                personalDua={extractPersonalDua(refinedDua.trim())}
+                hadithSources={
+                  (searchResult?.hadiths ?? [])
+                    .filter((h) => typeof h.metadata?.reference === "string" && (h.metadata.reference as string).trim() !== "")
+                    .slice(0, 8)
+                    .map((h) => {
+                      const edition = typeof h.metadata?.edition === "string" ? (HADITH_EDITION_LABELS[h.metadata.edition] ?? h.metadata.edition) : "";
+                      const ref = typeof h.metadata?.reference === "string" ? h.metadata.reference : "";
+                      return [edition, ref].filter(Boolean).join(" — ");
+                    })
+                }
               />
             </div>
             <section className="mt-6 w-full rounded-xl border border-slate-500/20 bg-slate-900/30 backdrop-blur-xl p-4 shadow-[0_0_24px_rgba(5,150,105,0.04)]">
@@ -1281,7 +1553,25 @@ export default function Home() {
               {query.trim() && (
                 <p className="mb-2 text-xs text-slate-500 font-github italic">From: &ldquo;{query.trim()}&rdquo;</p>
               )}
-              <p className="whitespace-pre-wrap text-slate-100 font-calligraphy text-lg leading-relaxed">{refinedDua}</p>
+              <div
+                ref={refinedContentRef}
+                onMouseUp={updateRefinedSelection}
+                onKeyUp={updateRefinedSelection}
+                className="text-slate-100 font-calligraphy text-lg leading-relaxed refined-dua-markdown"
+              >
+                <ReactMarkdown
+                  components={{
+                    p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
+                    h2: ({ children }) => <h2 className="text-xl font-semibold mt-4 mb-2 first:mt-0">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-lg font-medium mt-3 mb-1.5">{children}</h3>,
+                    ul: ({ children }) => <ul className="list-disc list-inside mb-3 space-y-1">{children}</ul>,
+                    ol: ({ children }) => <ol className="list-decimal list-inside mb-3 space-y-1">{children}</ol>,
+                    li: ({ children }) => <li className="ml-2">{children}</li>,
+                  }}
+                >
+                  {refinedDua}
+                </ReactMarkdown>
+              </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 <Button
                   className="font-github border-emerald-500/40 text-emerald-200 hover:bg-emerald-600/30"
@@ -1305,11 +1595,29 @@ export default function Home() {
                   className="font-github border-slate-500/40 text-slate-200 hover:bg-white/5"
                   variant="outline"
                   size="sm"
+                  onClick={handleSaveSelectionToLibrary}
+                  disabled={!selectedRefinedText}
+                >
+                  {savedSelectionFeedback ? "Saved selection to Library" : "Save selection to Library"}
+                </Button>
+                <Button
+                  className="font-github border-slate-500/40 text-slate-200 hover:bg-white/5"
+                  variant="outline"
+                  size="sm"
                   onClick={openShareModal}
                   aria-label="Share as image"
                 >
                   <Share2 className="size-4 mr-1 inline" />
                   Share
+                </Button>
+                <Button
+                  className="font-github border-slate-500/40 text-slate-200 hover:bg-white/5"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopyForDuaOS}
+                  aria-label="Copy for DuaOS import"
+                >
+                  {copyFeedbackId === "duaos-copy" ? "Copied" : "Copy for DuaOS"}
                 </Button>
               </div>
             </section>
@@ -1317,6 +1625,72 @@ export default function Home() {
         )}
 
       </div>
+
+      {/* Import modal */}
+      {importModalOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          aria-modal="true"
+          role="dialog"
+          aria-labelledby="import-modal-title"
+          onClick={() => !importSuccess && setImportModalOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-md rounded-2xl border border-slate-500/30 bg-slate-900/95 p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => !importSuccess && setImportModalOpen(false)}
+              className="absolute top-4 right-4 p-1 rounded-md text-slate-400 hover:text-slate-200 hover:bg-white/5"
+              aria-label="Close"
+            >
+              <X className="size-5" />
+            </button>
+            <h2 id="import-modal-title" className="text-lg font-semibold text-slate-100 font-github mb-2">
+              Import to Library
+            </h2>
+            <p className="text-sm text-slate-400 font-github mb-3">
+              Paste shared DuaOS JSON or text list, or choose a file. Du'as will be merged into your library.
+            </p>
+            <textarea
+              value={importInput}
+              onChange={(e) => { setImportInput(e.target.value); setImportError(null); }}
+              placeholder='Paste here or use "Choose file" below...'
+              className="w-full h-32 rounded-lg border border-slate-500/40 bg-slate-800/60 text-slate-100 font-github text-sm p-3 resize-y placeholder:text-slate-500"
+              aria-label="Paste import content"
+            />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json,.txt,application/json,text/plain"
+              onChange={handleImportFileChange}
+              className="mt-2 text-sm text-slate-400 font-github file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-emerald-500/20 file:text-emerald-200"
+              aria-label="Choose file to import"
+            />
+            {importError && <p className="mt-2 text-sm text-red-300 font-github">{importError}</p>}
+            {importSuccess && <p className="mt-2 text-sm text-emerald-300 font-github">{importSuccess}</p>}
+            <div className="mt-4 flex gap-2">
+              <Button
+                className="font-github flex-1"
+                onClick={handleImportConfirm}
+                disabled={!importInput.trim()}
+              >
+                Import
+              </Button>
+              <Button
+                className="font-github"
+                variant="outline"
+                size="sm"
+                onClick={() => { setImportModalOpen(false); setImportInput(""); setImportError(null); setImportSuccess(null); }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
