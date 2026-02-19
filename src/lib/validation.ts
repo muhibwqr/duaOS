@@ -4,6 +4,8 @@ import { z } from "zod";
 const MAX_QUERY_LENGTH = 2000;
 const MAX_USER_INPUT_LENGTH = 5000;
 const MAX_CONTEXT_LENGTH = 2000;
+/** Refine can accept multiple hadith (full text + refs); allow longer than single-context limit */
+export const MAX_HADITH_CONTEXT_LENGTH = 5000;
 
 const safeString = (maxLen: number) =>
   z
@@ -61,8 +63,18 @@ export const searchBodySchema = z.object({
 export const refineBodySchema = z.object({
   userInput: safeString(MAX_USER_INPUT_LENGTH),
   nameOfAllah: optionalSafeString(MAX_CONTEXT_LENGTH),
-  hadith: optionalSafeString(MAX_CONTEXT_LENGTH),
+  hadith: optionalSafeString(MAX_HADITH_CONTEXT_LENGTH),
+  quran: optionalSafeString(MAX_HADITH_CONTEXT_LENGTH),
+});
+
+/** Body for POST /api/duas (store a user-submitted du'a). */
+export const storeDuaBodySchema = z.object({
+  content: safeString(MAX_USER_INPUT_LENGTH),
+  nameOfAllah: z.string().max(MAX_CONTEXT_LENGTH).optional(),
+  hadithSnippet: z.string().max(MAX_CONTEXT_LENGTH).optional(),
+  intent: z.enum(["problem", "refine", "goal"]).optional(),
 });
 
 export type SearchBody = z.infer<typeof searchBodySchema>;
 export type RefineBody = z.infer<typeof refineBodySchema>;
+export type StoreDuaBody = z.infer<typeof storeDuaBodySchema>;

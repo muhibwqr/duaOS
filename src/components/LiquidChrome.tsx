@@ -2,7 +2,6 @@
 
 /**
  * Liquid chrome–style animated background (CSS-based).
- * Renders behind the grid when used in layout.
  */
 export function LiquidChrome({
   speed = 0.2,

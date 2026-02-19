@@ -35,6 +35,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing or invalid audio file." }, { status: 400 });
     }
 
+    const languageParam = formData.get("language");
+    const language = typeof languageParam === "string" && languageParam.trim() ? languageParam.trim() : undefined;
+
     if (file.size > MAX_FILE_BYTES) {
       return NextResponse.json(
         { error: `File too large. Maximum size is ${MAX_FILE_BYTES / 1024 / 1024} MB.` },
@@ -55,6 +58,7 @@ export async function POST(req: Request) {
     const transcription = await openai.audio.transcriptions.create({
       file: file as unknown as File,
       model: "whisper-1",
+      ...(language ? { language } : {}),
     });
 
     return NextResponse.json({ text: transcription.text ?? "" });

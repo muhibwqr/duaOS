@@ -12,19 +12,6 @@ export default function RamadanBackground() {
       />
       <div className="absolute inset-0 bg-[#020617]/70 pointer-events-none" />
 
-      {/* Diagonal diamond grid (two crossing line sets) with glowing lines */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage: `
-            linear-gradient(135deg, transparent 0%, transparent calc(50% - 4px), rgba(255,255,255,0.02) calc(50% - 2px), rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.02) calc(50% + 2px), transparent calc(50% + 4px), transparent 100%),
-            linear-gradient(-135deg, transparent 0%, transparent calc(50% - 4px), rgba(255,255,255,0.02) calc(50% - 2px), rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.02) calc(50% + 2px), transparent calc(50% + 4px), transparent 100%)
-          `,
-          backgroundSize: "40px 40px, 40px 40px",
-          boxShadow: "inset 0 0 140px rgba(255,255,255,0.03)",
-        }}
-      />
-
       {/* Grain & Vignette */}
       <div
         className="absolute inset-0 pointer-events-none opacity-[0.02] mix-blend-overlay"

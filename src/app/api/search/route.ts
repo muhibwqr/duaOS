@@ -3,6 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import OpenAI from "openai";
 import { searchBodySchema, HADITH_EDITIONS } from "@/lib/validation";
 import { rateLimitSearch } from "@/lib/rate-limit";
+import { enrichQuery } from "@/lib/query-enrichment";
+import { reRankForDuaIntent, type MatchRow } from "@/lib/rerank-dua-intent";
 
 export async function POST(req: Request) {
   try {
@@ -35,7 +37,7 @@ export async function POST(req: Request) {
       const msg = parsed.error.flatten().formErrors[0] ?? "Invalid request.";
       return NextResponse.json({ error: msg }, { status: 400 });
     }
-    const { query, edition } = parsed.data;
+    const { query, edition, intent } = parsed.data;
     const editionStr = String(edition ?? "");
     const preferredEdition =
       editionStr.length > 0 && HADITH_EDITIONS.includes(editionStr as (typeof HADITH_EDITIONS)[number])
@@ -45,18 +47,24 @@ export async function POST(req: Request) {
     const openai = new OpenAI({ apiKey });
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    const enrichedQuery = enrichQuery(query);
     const {
       data: [embeddingData],
     } = await openai.embeddings.create({
       model: "text-embedding-3-small",
-      input: query,
+      input: enrichedQuery,
     });
     const queryEmbedding = embeddingData.embedding;
 
+    const trimmedQuery = query.trim();
+    const minSimilarity = 0.35;
+    const dynamicThreshold = trimmedQuery.length > 30 ? 0.3 : Math.max(0.3, 0.4 - trimmedQuery.length / 200);
+    const matchCount = 25;
+
     const { data: matches, error } = await supabase.rpc("match_documents", {
       query_embedding: queryEmbedding,
-      match_threshold: 0.3,
-      match_count: preferredEdition ? 20 : 10,
+      match_threshold: dynamicThreshold,
+      match_count: matchCount,
       filter_metadata: {},
     });
 
@@ -72,22 +80,81 @@ export async function POST(req: Request) {
       );
     }
 
-    const names = (matches ?? []).filter(
-      (m: { metadata?: { type?: string } }) => m.metadata?.type === "name"
-    );
-    let hadiths = (matches ?? []).filter(
-      (m: { metadata?: { type?: string } }) => m.metadata?.type === "hadith"
-    );
+    const raw = (matches ?? []) as MatchRow[];
+    const withIntentScores = reRankForDuaIntent(raw);
+    const reranked = [...withIntentScores]
+      .filter((m) => (m.similarity ?? 0) >= minSimilarity)
+      .sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0));
+
+    const names = reranked.filter((m) => m.metadata?.type === "name");
+    let hadiths = reranked.filter((m) => m.metadata?.type === "hadith");
     if (preferredEdition) {
-      hadiths = hadiths.filter(
-        (m: { metadata?: { edition?: string } }) => m.metadata?.edition === preferredEdition
-      );
+      hadiths = hadiths.filter((m) => m.metadata?.edition === preferredEdition);
+    }
+    let quranVerses = reranked.filter((m) => m.metadata?.type === "quran");
+
+    // Only return hadith and Quran results that have a clear source (something that actually happened / can be cited)
+    const hasHadithSource = (m: MatchRow) => typeof m.metadata?.reference === "string" && m.metadata.reference.trim() !== "" || typeof m.metadata?.edition === "string";
+    const hasQuranSource = (m: MatchRow) => typeof m.metadata?.reference === "string" && m.metadata.reference.trim() !== "" || typeof m.metadata?.surah === "string";
+    hadiths = hadiths.filter(hasHadithSource);
+    quranVerses = quranVerses.filter(hasQuranSource);
+
+    const needName = names.length === 0;
+    const needHadith = hadiths.length === 0;
+    const needQuran = quranVerses.length === 0;
+
+    const [nameFallbackRes, hadithFallbackRes, quranFallbackRes] = await Promise.all([
+      needName
+        ? supabase.rpc("match_documents", {
+            query_embedding: queryEmbedding,
+            match_threshold: 0,
+            match_count: 1,
+            filter_metadata: { type: "name" },
+          })
+        : Promise.resolve({ data: [] }),
+      needHadith
+        ? supabase.rpc("match_documents", {
+            query_embedding: queryEmbedding,
+            match_threshold: 0,
+            match_count: 10,
+            filter_metadata: preferredEdition ? { type: "hadith", edition: preferredEdition } : { type: "hadith" },
+          })
+        : Promise.resolve({ data: [] }),
+      needQuran
+        ? supabase.rpc("match_documents", {
+            query_embedding: queryEmbedding,
+            match_threshold: 0,
+            match_count: 5,
+            filter_metadata: { type: "quran" },
+          })
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    let nameResult = names[0] ?? (nameFallbackRes.data ?? [])[0] ?? null;
+    if (needHadith) {
+      const fallback = (hadithFallbackRes.data ?? []) as MatchRow[];
+      hadiths = fallback.filter(hasHadithSource);
+    }
+    if (needQuran) {
+      const fallback = (quranFallbackRes.data ?? []) as MatchRow[];
+      quranVerses = fallback.filter(hasQuranSource);
+    }
+
+    if (intent === "goal" && nameResult && hadiths.length > 1) {
+      hadiths = [...hadiths].sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0));
+    }
+    if (intent === "problem" && hadiths.length > 1) {
+      hadiths = [...hadiths].sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0));
     }
 
     return NextResponse.json({
-      name: names[0] ?? null,
-      hadith: hadiths[0] ?? names[0] ?? null,
-      matches: matches ?? [],
+      name: nameResult,
+      hadith: hadiths[0] ?? null,
+      hadiths: hadiths,
+      quran: quranVerses[0] ?? null,
+      quranVerses: quranVerses,
+      matches: reranked,
+      intent: intent ?? undefined,
     });
   } catch (e: unknown) {
     console.error("Search error:", e);

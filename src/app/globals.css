@@ -146,25 +146,3 @@
   33% { background-position: 2% 1%, 98% 99%, 52% 48%, 0 0; }
   66% { background-position: -1% 2%, 101% 98%, 48% 52%, 0 0; }
 }
-
-/* Islamic geometric lattice: thin lines (0.5px), soft glow, depth without clutter */
-.bg-geometric-pattern {
-  --grid-line: rgba(255, 255, 255, 0.12);
-  --grid-glow: rgba(212, 175, 55, 0.03);
-  --cell: 48px;
-  background-color: #0f172a;
-  box-shadow:
-    inset 0 0 140px var(--grid-glow),
-    inset 0 0 80px rgba(255, 255, 255, 0.04);
-  background-image:
-    linear-gradient(to right, transparent 0, transparent calc(50% - 0.5px), var(--grid-line) 50%, transparent calc(50% + 0.5px), transparent 100%),
-    linear-gradient(to bottom, transparent 0, transparent calc(50% - 0.5px), var(--grid-line) 50%, transparent calc(50% + 0.5px), transparent 100%),
-    linear-gradient(45deg, transparent 0, transparent calc(50% - 0.5px), var(--grid-line) 50%, transparent calc(50% + 0.5px), transparent 100%),
-    linear-gradient(-45deg, transparent 0, transparent calc(50% - 0.5px), var(--grid-line) 50%, transparent calc(50% + 0.5px), transparent 100%);
-  background-size:
-    var(--cell) 100%,
-    100% var(--cell),
-    var(--cell) var(--cell),
-    var(--cell) var(--cell);
-  background-position: 0 0, 0 0, 0 0, 0 0;
-}

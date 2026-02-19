@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "seed": "node --env-file=.env --import tsx scripts/seed-spiritual-assets.ts"
+    "seed": "node --env-file=.env --import tsx scripts/seed-spiritual-assets.ts",
+    "download-data": "tsx scripts/download-data.ts",
+    "chunk-data": "tsx scripts/chunk-data.ts",
+    "data:pipeline": "npm run download-data && npm run chunk-data && npm run seed"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.29",
@@ -18,6 +21,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.34.0",
+    "html-to-image": "^1.11.13",
     "lucide-react": "^0.564.0",
     "next": "16.1.6",
     "openai": "^6.22.0",

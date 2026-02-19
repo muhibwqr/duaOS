@@ -7,11 +7,13 @@ const WINDOW_MS = 60 * 1000; // 1 minute
 const MAX_SEARCH_PER_WINDOW = 20;
 const MAX_REFINE_PER_WINDOW = 10;
 const MAX_TRANSCRIBE_PER_WINDOW = 15;
+const MAX_DUAS_PER_WINDOW = 30;
 
 type Entry = { count: number; resetAt: number };
 const searchStore = new Map<string, Entry>();
 const refineStore = new Map<string, Entry>();
 const transcribeStore = new Map<string, Entry>();
+const duasStore = new Map<string, Entry>();
 
 function getClientIdentifier(req: Request): string {
   const forwarded = req.headers.get("x-forwarded-for");
@@ -49,4 +51,8 @@ export function rateLimitRefine(req: Request): { ok: boolean; retryAfter?: numbe
 
 export function rateLimitTranscribe(req: Request): { ok: boolean; retryAfter?: number } {
   return checkLimit(transcribeStore, getClientIdentifier(req), MAX_TRANSCRIBE_PER_WINDOW);
+}
+
+export function rateLimitDuas(req: Request): { ok: boolean; retryAfter?: number } {
+  return checkLimit(duasStore, getClientIdentifier(req), MAX_DUAS_PER_WINDOW);
 }

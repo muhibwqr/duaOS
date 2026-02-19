@@ -3,7 +3,7 @@ import { Header } from "@/components/Header";
 
 export const metadata = {
   title: "How it works | du'aOS",
-  description: "A structured path to spiritual certainty — semantic mapping, refinement, and your personal du'a ledger.",
+  description: "A structured path to spiritual certainty — semantic mapping, refinement, and your personal du'a library.",
 };
 
 export default function HowPage() {
@@ -15,7 +15,7 @@ export default function HowPage() {
         <p className="text-slate-500 font-github text-sm mb-8">A Structured Path to Spiritual Certainty</p>
 
         <p className="font-serif text-slate-300 leading-relaxed mb-8">
-          The architecture of du'aOS is rooted in the beauty of the Asmaul Husna and the logic of a personal ledger. It functions as a bridge between your current reality and the timeless attributes of the Divine. The process is designed to be intentional and reflective.
+          The architecture of du'aOS is rooted in the beauty of the Asmaul Husna and the logic of a personal library. It functions as a bridge between your current reality and the timeless attributes of the Divine. The process is designed to be intentional and reflective.
         </p>
 
         <section className="mb-8">
@@ -50,7 +50,7 @@ export default function HowPage() {
         </section>
 
         <section className="mb-8">
-          <h2 className="text-lg font-serif font-medium text-slate-100 mb-3">Building Your Ledger</h2>
+          <h2 className="text-lg font-serif font-medium text-slate-100 mb-3">Building Your Library</h2>
           <p className="font-serif text-slate-300 leading-relaxed mb-4">
             Every du'a you refine can be saved to your private and secure journal.
           </p>
