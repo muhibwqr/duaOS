@@ -158,6 +158,46 @@
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
 }
 
+/* Refined du'a result: readable block with good spacing and no stark white */
+.refined-dua-markdown {
+  line-height: 1.75;
+  letter-spacing: 0.01em;
+}
+.refined-dua-markdown p {
+  margin-bottom: 0.75rem;
+}
+.refined-dua-markdown p:last-child {
+  margin-bottom: 0;
+}
+.refined-dua-markdown ul,
+.refined-dua-markdown ol {
+  margin-top: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding-left: 1.25rem;
+}
+.refined-dua-markdown li {
+  margin-bottom: 0.25rem;
+}
+.refined-dua-markdown li:last-child {
+  margin-bottom: 0;
+}
+.refined-dua-markdown h2 {
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.refined-dua-markdown h2:first-child {
+  margin-top: 0;
+}
+.refined-dua-markdown h3 {
+  margin-top: 0.75rem;
+  margin-bottom: 0.35rem;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
 @keyframes liquidChrome {
   0%, 100% { background-position: 0% 0%, 100% 100%, 50% 50%, 0 0; }
   33% { background-position: 2% 1%, 98% 99%, 52% 48%, 0 0; }

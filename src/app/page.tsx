@@ -874,14 +874,14 @@ export default function Home() {
     <div className="min-h-screen text-slate-800 dark:text-slate-200 flex flex-col">
       {sourcesPopupOpen && searchResult !== null && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm"
           aria-modal="true"
           role="dialog"
           aria-labelledby="sources-popup-title"
           onClick={() => setSourcesPopupOpen(false)}
         >
           <div
-            className="relative w-full max-w-xl rounded-2xl border border-slate-200/60 dark:border-slate-500/30 bg-white/95 dark:bg-slate-900/95 p-6 shadow-[0_4px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_32px_rgba(0,0,0,0.4)] max-h-[85vh] flex flex-col backdrop-blur-xl"
+            className="relative w-full max-w-xl rounded-t-2xl sm:rounded-2xl border border-slate-200/60 dark:border-slate-500/30 bg-white/95 dark:bg-slate-900/95 p-4 sm:p-6 shadow-[0_4px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_32px_rgba(0,0,0,0.4)] max-h-[85dvh] flex flex-col backdrop-blur-xl pt-[env(safe-area-inset-top)]"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -1051,14 +1051,14 @@ export default function Home() {
       {/* Share modal — center, intention check then options */}
       {shareModalOpen && refinedDua && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm"
           aria-modal="true"
           role="dialog"
           aria-label="Share du'a"
           onClick={() => setShareModalOpen(false)}
         >
           <div
-            className="relative w-full max-w-sm rounded-2xl border border-slate-200/60 dark:border-slate-500/30 bg-white/95 dark:bg-slate-900/95 p-6 shadow-[0_4px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl"
+            className="relative w-full max-w-sm rounded-t-2xl sm:rounded-2xl border border-slate-200/60 dark:border-slate-500/30 bg-white/95 dark:bg-slate-900/95 p-4 sm:p-6 shadow-[0_4px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_32px_rgba(0,0,0,0.4)] max-h-[85dvh] overflow-y-auto backdrop-blur-xl pt-[env(safe-area-inset-top)]"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -1146,11 +1146,11 @@ export default function Home() {
         onClick={() => setFavoritesPanelOpen(false)}
       />
       <aside
-        className={`fixed top-0 right-0 bottom-0 z-50 w-full max-w-md flex flex-col border-l border-slate-200/60 dark:border-slate-500/30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-[0_0_40px_rgba(0,0,0,0.08)] dark:shadow-[0_0_40px_rgba(0,0,0,0.4)] transition-transform duration-300 ease-out ${favoritesPanelOpen ? "translate-x-0" : "translate-x-full"}`}
+        className={`fixed top-0 right-0 bottom-0 z-50 w-full max-w-md flex flex-col border-l border-slate-200/60 dark:border-slate-500/30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-[0_0_40px_rgba(0,0,0,0.08)] dark:shadow-[0_0_40px_rgba(0,0,0,0.4)] transition-transform duration-300 ease-out pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] ${favoritesPanelOpen ? "translate-x-0" : "translate-x-full"}`}
         aria-label="Favorites and Library"
         aria-hidden={!favoritesPanelOpen}
       >
-            <div className="flex items-center justify-between gap-4 border-b border-slate-200/60 dark:border-slate-500/30 px-4 py-3">
+            <div className="flex items-center justify-between gap-2 sm:gap-4 border-b border-slate-200/60 dark:border-slate-500/30 px-3 py-3 sm:px-4 flex-wrap">
               <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100 font-github uppercase tracking-wider">
                 Favorites & Library
               </h2>
@@ -1329,9 +1329,9 @@ export default function Home() {
         favoritesCount={favorites.length}
         onCartClick={() => setFavoritesPanelOpen(true)}
       />
-      <main className="flex-1 flex flex-col items-center justify-center mx-auto max-w-2xl w-full px-4 py-12 pt-36">
+      <main className="flex-1 flex flex-col items-center justify-center mx-auto max-w-2xl w-full px-4 py-8 sm:py-12 pt-28 sm:pt-36 pb-[env(safe-area-inset-bottom)]">
         <KofiBanner />
-        <h1 className="font-serif text-2xl text-slate-800 dark:text-slate-100 text-center mb-6 leading-relaxed mt-4">
+        <h1 className="font-serif text-xl sm:text-2xl text-slate-800 dark:text-slate-100 text-center mb-4 sm:mb-6 leading-relaxed mt-2 sm:mt-4 px-1">
           What do you want to make du'a for today?
         </h1>
         <div className="group w-full flex items-end gap-2 rounded-2xl border border-slate-200/80 dark:border-slate-500/40 bg-white/90 dark:bg-slate-800/60 px-4 py-3 min-h-[52px] backdrop-blur-xl transition-all duration-200 shadow-[0_2px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_24px_rgba(0,0,0,0.3)] hover:border-emerald-400/40 dark:hover:border-emerald-500/50">
@@ -1357,8 +1357,8 @@ export default function Home() {
               </div>
             )}
           </div>
-          <div className="flex items-center gap-1 shrink-0">
-            <div className="relative flex items-center font-github text-sm">
+          <div className="flex items-center gap-1 shrink-0 flex-wrap sm:flex-nowrap">
+            <div className="relative flex items-center font-github text-sm min-w-0">
               <select
                 value={edition}
                 onChange={(e) => setEdition(e.target.value)}
@@ -1426,13 +1426,13 @@ export default function Home() {
       </main>
 
       {/* Results below the centered block */}
-      <div className="mx-auto max-w-2xl w-full px-4 pb-12">
+      <div className="mx-auto max-w-2xl w-full px-4 pb-[max(3rem,env(safe-area-inset-bottom))]">
         {searchError && (
           <p className="mt-6 text-center text-sm text-amber-300/90 font-github">{searchError}</p>
         )}
         {searchResult !== null && (
-          <section className="mt-8 w-full rounded-2xl border border-slate-200/60 bg-white/90 backdrop-blur-xl p-4 text-slate-800 font-github shadow-[0_2px_24px_rgba(0,0,0,0.06)]">
-            <h2 className="mb-2 text-xs font-medium text-slate-500 uppercase tracking-wider">From search</h2>
+          <section className="mt-8 w-full rounded-2xl border border-slate-200/60 dark:border-slate-500/30 bg-slate-50/95 dark:bg-slate-800/60 backdrop-blur-xl p-4 sm:p-5 text-slate-800 dark:text-slate-200 font-github shadow-[0_2px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_24px_rgba(0,0,0,0.25)]">
+            <h2 className="mb-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">From search</h2>
             {searchResult.name && (
               <p className="mb-2">
                 <span className="font-medium text-emerald-600 dark:text-emerald-400">Name of Allah:</span> <span className="font-calligraphy text-slate-800 dark:text-slate-200">{searchResult.name.content}</span>
@@ -1540,22 +1540,22 @@ export default function Home() {
                 }
               />
             </div>
-            <section className="mt-6 w-full rounded-2xl border border-slate-200/60 dark:border-slate-500/30 bg-white/90 dark:bg-slate-800/50 backdrop-blur-xl p-4 shadow-[0_2px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_24px_rgba(0,0,0,0.3)]">
-              <h2 className="mb-2 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider font-github">Refined du'a</h2>
+            <section className="mt-6 w-full rounded-2xl border border-slate-200/60 dark:border-slate-500/30 bg-slate-50/95 dark:bg-slate-800/60 backdrop-blur-xl p-4 sm:p-5 shadow-[0_2px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_24px_rgba(0,0,0,0.25)]">
+              <h2 className="mb-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider font-github">Refined du'a</h2>
               {query.trim() && (
-                <p className="mb-2 text-xs text-slate-500 font-github italic">From: &ldquo;{query.trim()}&rdquo;</p>
+                <p className="mb-3 text-xs text-slate-500 dark:text-slate-400 font-github italic">From: &ldquo;{query.trim()}&rdquo;</p>
               )}
               <div
                 ref={refinedContentRef}
                 onMouseUp={updateRefinedSelection}
                 onKeyUp={updateRefinedSelection}
-                className="text-slate-800 dark:text-slate-200 font-calligraphy text-lg leading-relaxed refined-dua-markdown"
+                className="rounded-xl bg-slate-100/80 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-600/40 p-4 sm:p-5 text-slate-800 dark:text-slate-200 font-calligraphy text-lg refined-dua-markdown"
               >
                 <ReactMarkdown
                   components={{
                     p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
-                    h2: ({ children }) => <h2 className="text-xl font-semibold mt-4 mb-2 first:mt-0">{children}</h2>,
-                    h3: ({ children }) => <h3 className="text-lg font-medium mt-3 mb-1.5">{children}</h3>,
+                    h2: ({ children }) => <h2 className="text-xl font-semibold mt-4 mb-2 first:mt-0 text-slate-800 dark:text-slate-100">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-lg font-medium mt-3 mb-1.5 text-slate-800 dark:text-slate-100">{children}</h3>,
                     ul: ({ children }) => <ul className="list-disc list-inside mb-3 space-y-1">{children}</ul>,
                     ol: ({ children }) => <ol className="list-decimal list-inside mb-3 space-y-1">{children}</ol>,
                     li: ({ children }) => <li className="ml-2">{children}</li>,
@@ -1621,14 +1621,14 @@ export default function Home() {
       {/* Import modal */}
       {importModalOpen && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm"
           aria-modal="true"
           role="dialog"
           aria-labelledby="import-modal-title"
           onClick={() => !importSuccess && setImportModalOpen(false)}
         >
           <div
-            className="relative w-full max-w-md rounded-2xl border border-slate-200/60 dark:border-slate-500/30 bg-white/95 dark:bg-slate-900/95 p-6 shadow-[0_4px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl"
+            className="relative w-full max-w-md rounded-t-2xl sm:rounded-2xl border border-slate-200/60 dark:border-slate-500/30 bg-white/95 dark:bg-slate-900/95 p-4 sm:p-6 shadow-[0_4px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_32px_rgba(0,0,0,0.4)] max-h-[85dvh] overflow-y-auto backdrop-blur-xl pt-[env(safe-area-inset-top)]"
             onClick={(e) => e.stopPropagation()}
           >
             <button
