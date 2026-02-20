@@ -14,6 +14,10 @@
   --font-calligraphy: "Amiri", serif;
   --color-accent-gold: #d4af37;
   --color-accent-emerald: #059669;
+  --accent-green: oklch(0.55 0.15 165);
+  --accent-green-soft: oklch(0.65 0.12 165);
+  --glass-shadow: 0 2px 24px rgba(0, 0, 0, 0.06);
+  --glass-shadow-lg: 0 4px 32px rgba(0, 0, 0, 0.08);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -54,8 +58,8 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --background: oklch(0.985 0.002 100);
+  --foreground: oklch(0.2 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
@@ -139,6 +143,19 @@
 
 .font-calligraphy {
   font-family: var(--font-calligraphy), "Amiri", serif;
+}
+
+.glass-panel {
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  background-color: oklch(1 0 0 / 0.8);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--glass-shadow);
+}
+
+.dark .glass-panel {
+  background-color: oklch(0.145 0 0 / 0.7);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
 }
 
 @keyframes liquidChrome {

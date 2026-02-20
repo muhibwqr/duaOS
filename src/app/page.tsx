@@ -244,7 +244,6 @@ export default function Home() {
   const [searchError, setSearchError] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [transcribeError, setTranscribeError] = useState<string | null>(null);
-  const [voiceArabic, setVoiceArabic] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const shareCardRef = useRef<HTMLDivElement | null>(null);
@@ -257,16 +256,19 @@ export default function Home() {
   const [sourcesPopupOpen, setSourcesPopupOpen] = useState(false);
   const [sourceTranslations, setSourceTranslations] = useState<Record<string, string>>({});
   const [translatingSource, setTranslatingSource] = useState<Record<string, boolean>>({});
-  const [edition, setEdition] = useState<string>(() => {
-    if (typeof window === "undefined") return "";
+  const [edition, setEdition] = useState<string>("");
+  const [availableEditions, setAvailableEditions] = useState<string[]>([]);
+
+  // Sync edition from localStorage after mount to avoid hydration mismatch (server has no localStorage).
+  useEffect(() => {
     try {
       const s = localStorage.getItem(HADITH_EDITION_STORAGE_KEY);
-      return s && (s === "" || HADITH_EDITIONS.includes(s as (typeof HADITH_EDITIONS)[number])) ? s : "";
+      const value = s && (s === "" || HADITH_EDITIONS.includes(s as (typeof HADITH_EDITIONS)[number])) ? s : "";
+      setEdition(value);
     } catch {
-      return "";
+      // ignore
     }
-  });
-  const [availableEditions, setAvailableEditions] = useState<string[]>([]);
+  }, []);
   const [selectedRefinedText, setSelectedRefinedText] = useState<string | null>(null);
   const [savedSelectionFeedback, setSavedSelectionFeedback] = useState(false);
   const refinedContentRef = useRef<HTMLDivElement | null>(null);
@@ -842,7 +844,6 @@ export default function Home() {
         try {
           const form = new FormData();
           form.append("file", blob, "recording.webm");
-          if (voiceArabic) form.append("language", "ar");
           const res = await fetch("/api/transcribe", { method: "POST", body: form });
           const data = await res.json().catch(() => ({}));
           if (!res.ok) {
@@ -870,7 +871,7 @@ export default function Home() {
     typeof hadithEdition === "string" ? HADITH_EDITION_LABELS[hadithEdition] ?? hadithEdition : null;
 
   return (
-    <div className="min-h-screen bg-transparent text-slate-200 flex flex-col">
+    <div className="min-h-screen text-slate-800 dark:text-slate-200 flex flex-col">
       {sourcesPopupOpen && searchResult !== null && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
@@ -880,27 +881,27 @@ export default function Home() {
           onClick={() => setSourcesPopupOpen(false)}
         >
           <div
-            className="relative w-full max-w-xl rounded-2xl border border-slate-500/30 bg-slate-900/95 p-6 shadow-xl max-h-[85vh] flex flex-col"
+            className="relative w-full max-w-xl rounded-2xl border border-slate-200/60 dark:border-slate-500/30 bg-white/95 dark:bg-slate-900/95 p-6 shadow-[0_4px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_32px_rgba(0,0,0,0.4)] max-h-[85vh] flex flex-col backdrop-blur-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               type="button"
               onClick={() => setSourcesPopupOpen(false)}
-              className="absolute top-4 right-4 p-1 rounded-md text-slate-400 hover:text-slate-200 hover:bg-white/5"
+              className="absolute top-4 right-4 p-1 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
               aria-label="Close"
             >
               <X className="size-5" />
             </button>
             <div className="flex items-center gap-2 mb-4">
-              <CheckCircle2 className="size-6 text-emerald-400 shrink-0" aria-hidden />
-              <h2 id="sources-popup-title" className="text-lg font-semibold text-slate-100 font-github">
+              <CheckCircle2 className="size-6 text-emerald-600 shrink-0" aria-hidden />
+              <h2 id="sources-popup-title" className="text-lg font-semibold text-slate-800 dark:text-slate-100 font-github">
                 Verified sources
               </h2>
             </div>
             <div className="overflow-y-auto pr-1 space-y-3">
               {searchResult.name && (
-                <p className="text-sm text-slate-300 font-github">
-                  <span className="text-emerald-400/90">Name of Allah:</span> {searchResult.name.content}
+                <p className="text-sm text-slate-700 dark:text-slate-300 font-github">
+                  <span className="text-emerald-600 dark:text-emerald-400">Name of Allah:</span> {searchResult.name.content}
                 </p>
               )}
               {(() => {
@@ -909,7 +910,7 @@ export default function Home() {
                 );
                 return popupHadiths.length > 0 ? (
                 <div className="space-y-2">
-                  <p className="text-emerald-400/90 font-github not-italic text-sm">
+                  <p className="text-emerald-600 font-github not-italic text-sm">
                     Hadith (by relevance) - {popupHadiths.length}
                   </p>
                   {popupHadiths.map((h, i) => {
@@ -920,32 +921,32 @@ export default function Home() {
                     return (
                       <details
                         key={h.id ?? i}
-                        className="group rounded-lg border border-slate-500/20 bg-slate-800/40 open:bg-slate-800/70 transition-colors"
+                        className="group rounded-lg border border-slate-200/60 dark:border-slate-500/30 bg-slate-50/80 dark:bg-slate-800/50 open:bg-slate-100/80 dark:open:bg-slate-700/50 transition-colors"
                       >
                         <summary className="list-none cursor-pointer px-3 py-2 flex items-center justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="text-xs text-slate-400 font-github">Hadith #{i + 1}</p>
-                            <p className="text-sm text-slate-300 font-github truncate">
+                            <p className="text-xs text-slate-500 dark:text-slate-400 font-github">Hadith #{i + 1}</p>
+                            <p className="text-sm text-slate-700 dark:text-slate-300 font-github truncate">
                               {label || h.content.slice(0, 80)}
                             </p>
                           </div>
-                          <ChevronDown className="size-4 text-slate-400 transition-transform group-open:rotate-180 shrink-0" />
+                          <ChevronDown className="size-4 text-slate-400 dark:text-slate-500 transition-transform group-open:rotate-180 shrink-0" />
                         </summary>
                         <div className="px-3 pb-3">
-                          <p className="text-sm text-slate-200 font-calligraphy whitespace-pre-wrap">{h.content}</p>
+                          <p className="text-sm text-slate-800 dark:text-slate-200 font-calligraphy whitespace-pre-wrap">{h.content}</p>
                           {hasArabic && (
                             <div className="mt-2">
                               {!sourceTranslations[sourceKey] && (
                                 <button
                                   type="button"
                                   onClick={() => void ensureSourceTranslation(sourceKey, h.content)}
-                                  className="text-xs font-github text-emerald-300 hover:text-emerald-200"
+                                  className="text-xs font-github text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"
                                 >
                                   {translatingSource[sourceKey] ? "Translating..." : "Show English translation"}
                                 </button>
                               )}
                               {sourceTranslations[sourceKey] && (
-                                <p className="text-sm text-slate-300 font-github italic mt-1">
+                                <p className="text-sm text-slate-600 dark:text-slate-400 font-github italic mt-1">
                                   {sourceTranslations[sourceKey]}
                                 </p>
                               )}
@@ -957,12 +958,12 @@ export default function Home() {
                     );
                   })}
                 </div>
-                ) : <p className="text-sm text-slate-500 font-github">No hadith match with reference.</p>;
+                ) : <p className="text-sm text-slate-500 dark:text-slate-400 font-github">No hadith match with reference.</p>;
               })()}
               {searchResult.quran?.content && (typeof searchResult.quran?.metadata?.reference === "string" || typeof searchResult.quran?.metadata?.surah === "string") ? (
                 <div>
-                  <p className="text-sm text-slate-300 font-github font-calligraphy">
-                    <span className="text-emerald-400/90 font-github not-italic">Quran:</span> {searchResult.quran.content}
+                  <p className="text-sm text-slate-700 dark:text-slate-300 font-github font-calligraphy">
+                    <span className="text-emerald-600 dark:text-emerald-400 font-github not-italic">Quran:</span> {searchResult.quran.content}
                   </p>
                   {(() => {
                     const key = `quran-${searchResult.quran.id ?? searchResult.quran.metadata?.reference ?? "current"}`;
@@ -980,7 +981,7 @@ export default function Home() {
                           </button>
                         )}
                         {sourceTranslations[key] && (
-                          <p className="text-sm text-slate-300 font-github italic mt-1">
+                          <p className="text-sm text-slate-600 font-github italic mt-1">
                             {sourceTranslations[key]}
                           </p>
                         )}
@@ -994,15 +995,15 @@ export default function Home() {
                   ) : null}
                 </div>
               ) : (
-                <p className="text-sm text-slate-500 font-github">No Quran verse match with citation.</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 font-github">No Quran verse match with citation.</p>
               )}
-              <p className="text-xs text-slate-500 font-github border-t border-slate-500/20 pt-3">
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-github border-t border-slate-200/60 dark:border-slate-500/30 pt-3">
                 DuaOS connects your intention to verified sources: Names of Allah, hadith, and the Qur&apos;an (The Noble Quran, English).
               </p>
               {refinedDua ? (
-                <div className="border-t border-slate-500/20 pt-3 mt-3">
-                  <p className="text-emerald-400/90 font-github not-italic text-sm mb-2">Refined du&apos;a</p>
-                  <div className="text-sm text-slate-100 font-calligraphy leading-relaxed">
+                <div className="border-t border-slate-200/60 dark:border-slate-500/30 pt-3 mt-3">
+                  <p className="text-emerald-600 dark:text-emerald-400 font-github not-italic text-sm mb-2">Refined du&apos;a</p>
+                  <div className="text-sm text-slate-800 dark:text-slate-200 font-calligraphy leading-relaxed">
                     <ReactMarkdown
                       components={{
                         p: ({ children }) => <p className="mb-2 last:mb-0 text-sm">{children}</p>,
@@ -1022,7 +1023,7 @@ export default function Home() {
             <div className="mt-4 flex gap-2">
               {!refinedDua && (
                 <Button
-                  className="flex-1 font-github border-emerald-500/40 text-emerald-200 hover:bg-emerald-600/30"
+                  className="flex-1 font-github border-emerald-500/40 text-emerald-700 hover:bg-emerald-500/10"
                   variant="outline"
                   size="sm"
                   onClick={() => {
@@ -1057,13 +1058,13 @@ export default function Home() {
           onClick={() => setShareModalOpen(false)}
         >
           <div
-            className="relative w-full max-w-sm rounded-2xl border border-slate-500/30 bg-slate-900/95 p-6 shadow-xl"
+            className="relative w-full max-w-sm rounded-2xl border border-slate-200/60 dark:border-slate-500/30 bg-white/95 dark:bg-slate-900/95 p-6 shadow-[0_4px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               type="button"
               onClick={() => setShareModalOpen(false)}
-              className="absolute top-3 right-3 p-1.5 rounded-md text-slate-400 hover:text-slate-200 hover:bg-white/5"
+              className="absolute top-3 right-3 p-1.5 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
               aria-label="Close"
             >
               <X className="size-5" />
@@ -1088,7 +1089,7 @@ export default function Home() {
 
             {shareModalStep === "options" && (
               <>
-                <h3 className="text-sm font-medium text-slate-300 font-github mb-4">Share</h3>
+                <h3 className="text-sm font-medium text-slate-700 dark:text-slate-200 font-github mb-4">Share</h3>
                 {shareError && (
                   <p className="mb-3 text-sm text-red-200/95 font-github">{shareError}</p>
                 )}
@@ -1097,17 +1098,17 @@ export default function Home() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full font-github border-slate-500/40 text-slate-200 justify-center"
+                      className="w-full font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
                       onClick={shareToTwitter}
                     >
                       Twitter
                     </Button>
-                    <p className="mt-1 text-xs text-slate-500 font-github text-center">(text only)</p>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 font-github text-center">(text only)</p>
                   </div>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full font-github border-slate-500/40 text-slate-200 justify-center"
+                    className="w-full font-github border-slate-200/80 text-slate-700 justify-center hover:bg-slate-100"
                     onClick={() => void shareDownload()}
                   >
                     Instagram
@@ -1115,7 +1116,7 @@ export default function Home() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full font-github border-slate-500/40 text-slate-200 justify-center"
+                    className="w-full font-github border-slate-200/80 text-slate-700 justify-center hover:bg-slate-100"
                     onClick={() => void shareToMessage()}
                   >
                     Message
@@ -1123,13 +1124,13 @@ export default function Home() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full font-github border-slate-500/40 text-slate-200 justify-center"
+                    className="w-full font-github border-slate-200/80 text-slate-700 justify-center hover:bg-slate-100"
                     onClick={() => void shareDownload()}
                   >
                     Download
                   </Button>
                 </div>
-                <p className="mt-3 text-xs text-slate-500 font-github text-center">
+                <p className="mt-3 text-xs text-slate-500 dark:text-slate-400 font-github text-center">
                   Instagram: download image, then post from your gallery.
                 </p>
               </>
@@ -1145,19 +1146,19 @@ export default function Home() {
         onClick={() => setFavoritesPanelOpen(false)}
       />
       <aside
-        className={`fixed top-0 right-0 bottom-0 z-50 w-full max-w-md flex flex-col border-l border-slate-500/30 bg-slate-900/95 backdrop-blur-xl shadow-2xl transition-transform duration-300 ease-out ${favoritesPanelOpen ? "translate-x-0" : "translate-x-full"}`}
+        className={`fixed top-0 right-0 bottom-0 z-50 w-full max-w-md flex flex-col border-l border-slate-200/60 dark:border-slate-500/30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-[0_0_40px_rgba(0,0,0,0.08)] dark:shadow-[0_0_40px_rgba(0,0,0,0.4)] transition-transform duration-300 ease-out ${favoritesPanelOpen ? "translate-x-0" : "translate-x-full"}`}
         aria-label="Favorites and Library"
         aria-hidden={!favoritesPanelOpen}
       >
-            <div className="flex items-center justify-between gap-4 border-b border-slate-500/20 px-4 py-3">
-              <h2 className="text-sm font-semibold text-slate-100 font-github uppercase tracking-wider">
+            <div className="flex items-center justify-between gap-4 border-b border-slate-200/60 dark:border-slate-500/30 px-4 py-3">
+              <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100 font-github uppercase tracking-wider">
                 Favorites & Library
               </h2>
               <div className="flex items-center gap-2 flex-wrap justify-end">
                 <button
                   type="button"
                   onClick={() => setImportModalOpen(true)}
-                  className="text-xs font-github text-slate-400 hover:text-slate-200 transition-colors"
+                  className="text-xs font-github text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
                   aria-label="Import library"
                 >
                   Import
@@ -1167,7 +1168,7 @@ export default function Home() {
                     <button
                       type="button"
                       onClick={() => void handleExportToNotes()}
-                      className="text-xs font-github text-slate-400 hover:text-slate-200 transition-colors"
+                      className="text-xs font-github text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
                       aria-label="Export to Notes"
                     >
                       {exportToNotesFeedback || "Export to Notes"}
@@ -1175,7 +1176,7 @@ export default function Home() {
                     <button
                       type="button"
                       onClick={() => handleShareForDuaOS()}
-                      className="text-xs font-github text-slate-400 hover:text-slate-200 transition-colors"
+                      className="text-xs font-github text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
                       aria-label="Share for DuaOS import"
                     >
                       {shareForDuaOSFeedback || "Share for DuaOS"}
@@ -1183,7 +1184,7 @@ export default function Home() {
                     <button
                       type="button"
                       onClick={() => void handleShareDuaList()}
-                      className="text-xs font-github text-slate-400 hover:text-slate-200 transition-colors"
+                      className="text-xs font-github text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
                       aria-label="Share my du'a list"
                     >
                       {listShareFeedback === "shared" ? "Shared" : listShareFeedback === "copied" ? "Copied" : "Share list"}
@@ -1193,7 +1194,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => setFavoritesPanelOpen(false)}
-                  className="rounded-full p-2 text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-colors"
+                  className="rounded-full p-2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   aria-label="Close"
                 >
                   <X className="size-5" />
@@ -1209,7 +1210,7 @@ export default function Home() {
                 ) : (
                   <>
                     <Button
-                      className="mb-4 w-full font-github border-slate-500/40 text-slate-200 hover:bg-white/5"
+                      className="mb-4 w-full font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                       variant="outline"
                       size="sm"
                       onClick={() => {
@@ -1221,16 +1222,16 @@ export default function Home() {
                     </Button>
                     <ul className="space-y-4">
                       {[...favorites].reverse().map((item) => (
-                        <li key={item.id} className="rounded-lg border border-slate-500/20 bg-slate-800/40 p-3">
-                          <p className="whitespace-pre-wrap text-sm text-slate-100 font-calligraphy leading-relaxed">{item.dua}</p>
+                        <li key={item.id} className="rounded-lg border border-slate-200/60 dark:border-slate-500/30 bg-slate-50/80 dark:bg-slate-800/50 p-3">
+                          <p className="whitespace-pre-wrap text-sm text-slate-800 dark:text-slate-200 font-calligraphy leading-relaxed">{item.dua}</p>
                           {item.nameOfAllah && (
-                            <p className="mt-1.5 text-xs text-slate-500 font-github">— {item.nameOfAllah}</p>
+                            <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400 font-github">— {item.nameOfAllah}</p>
                           )}
                           <div className="mt-3 flex flex-wrap gap-2">
                             <button
                               type="button"
                               onClick={() => handleAddDuaToFavorites({ dua: item.dua, nameOfAllah: item.nameOfAllah, hadithSnippet: item.hadithSnippet })}
-                              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+                              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20"
                               aria-label="Add to favorites"
                             >
                               <Plus className="size-3.5" />
@@ -1238,7 +1239,7 @@ export default function Home() {
                             <button
                               type="button"
                               onClick={() => handleCopyDua(item.dua, item.id)}
-                              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
                               aria-label="Copy"
                             >
                               <Copy className="size-3.5" />
@@ -1247,7 +1248,7 @@ export default function Home() {
                             <button
                               type="button"
                               onClick={() => handleSaveFromFavorites(item)}
-                              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
                               aria-label="Save to Library"
                             >
                               Save to Library
@@ -1255,7 +1256,7 @@ export default function Home() {
                             <button
                               type="button"
                               onClick={() => setFavoritesState(removeFromFavorites(item.id))}
-                              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-400 hover:text-red-300 hover:bg-red-500/10"
+                              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 dark:hover:bg-red-500/20"
                               aria-label="Remove"
                             >
                               <Trash2 className="size-3.5" />
@@ -1271,24 +1272,24 @@ export default function Home() {
 
               {/* Personal Library */}
               <section aria-label="Personal Library">
-                <h3 className="mb-3 text-xs font-medium text-slate-500 uppercase tracking-wider font-github">Personal Library</h3>
+                <h3 className="mb-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider font-github">Personal Library</h3>
                 {library.length === 0 ? (
-                  <p className="text-sm text-slate-500 font-github">Du'as you save to the library will appear here.</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 font-github">Du'as you save to the library will appear here.</p>
                 ) : (
                   <ul className="space-y-4">
                     {[...library].reverse().map((entry, i) => {
                       const entryId = `library-${entry.at}-${i}`;
                       return (
-                        <li key={entryId} className="rounded-lg border border-slate-500/20 bg-slate-800/40 p-3">
-                          <p className="whitespace-pre-wrap text-sm text-slate-100 font-calligraphy leading-relaxed">{entry.dua}</p>
+                        <li key={entryId} className="rounded-lg border border-slate-200/60 dark:border-slate-500/30 bg-slate-50/80 dark:bg-slate-800/50 p-3">
+                          <p className="whitespace-pre-wrap text-sm text-slate-800 dark:text-slate-200 font-calligraphy leading-relaxed">{entry.dua}</p>
                           {entry.name && (
-                            <p className="mt-1.5 text-xs text-slate-500 font-github">— {entry.name}</p>
+                            <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400 font-github">— {entry.name}</p>
                           )}
                           <div className="mt-3 flex flex-wrap items-center gap-2">
                             <button
                               type="button"
                               onClick={() => handleAddDuaToFavorites({ dua: entry.dua, nameOfAllah: entry.name })}
-                              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+                              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20"
                               aria-label="Add to favorites"
                             >
                               <Plus className="size-3.5" />
@@ -1296,7 +1297,7 @@ export default function Home() {
                             <button
                               type="button"
                               onClick={() => handleCopyDua(entry.dua, entryId)}
-                              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
                               aria-label="Copy"
                             >
                               <Copy className="size-3.5" />
@@ -1305,13 +1306,13 @@ export default function Home() {
                             <button
                               type="button"
                               onClick={() => handleRemoveFromLibrary(entry)}
-                              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-400 hover:text-red-300 hover:bg-red-500/10"
+                              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 dark:hover:bg-red-500/20"
                               aria-label="Remove from library"
                             >
                               <Trash2 className="size-3.5" />
                               Remove
                             </button>
-                            <p className="text-xs text-slate-500 font-github">
+                            <p className="text-xs text-slate-500 dark:text-slate-400 font-github">
                               {new Date(entry.at).toLocaleString()}
                             </p>
                           </div>
@@ -1330,10 +1331,10 @@ export default function Home() {
       />
       <main className="flex-1 flex flex-col items-center justify-center mx-auto max-w-2xl w-full px-4 py-12 pt-36">
         <KofiBanner />
-        <h1 className="font-serif text-2xl text-slate-100 text-center mb-6 leading-relaxed mt-4">
+        <h1 className="font-serif text-2xl text-slate-800 dark:text-slate-100 text-center mb-6 leading-relaxed mt-4">
           What do you want to make du'a for today?
         </h1>
-        <div className="group w-full flex items-end gap-2 rounded-2xl border border-slate-500/30 bg-slate-800/50 px-4 py-3 min-h-[52px] backdrop-blur-xl transition-all duration-300 shadow-[0_0_32px_rgba(5,150,105,0.12)] hover:border-emerald-500/20 hover:shadow-[0_0_40px_rgba(5,150,105,0.18)]">
+        <div className="group w-full flex items-end gap-2 rounded-2xl border border-slate-200/80 dark:border-slate-500/40 bg-white/90 dark:bg-slate-800/60 px-4 py-3 min-h-[52px] backdrop-blur-xl transition-all duration-200 shadow-[0_2px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_24px_rgba(0,0,0,0.3)] hover:border-emerald-400/40 dark:hover:border-emerald-500/50">
           <div className="flex-1 min-w-0 relative flex items-center">
             <input
               type="text"
@@ -1341,7 +1342,7 @@ export default function Home() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              className="w-full bg-transparent text-slate-100 text-base font-calligraphy outline-none placeholder:text-slate-500 py-1"
+              className="w-full bg-transparent text-slate-800 dark:text-slate-200 text-base font-calligraphy outline-none placeholder:text-slate-500 dark:placeholder:text-slate-400 py-1"
             />
             {!query && (
               <div
@@ -1361,7 +1362,7 @@ export default function Home() {
               <select
                 value={edition}
                 onChange={(e) => setEdition(e.target.value)}
-                className="appearance-none bg-transparent pr-5 py-1 outline-none cursor-pointer text-slate-200 text-sm min-w-0 max-w-[140px]"
+                className="appearance-none bg-transparent pr-5 py-1 outline-none cursor-pointer text-slate-700 dark:text-slate-300 text-sm min-w-0 max-w-[140px]"
                 aria-label="Hadith book"
               >
                 <option value="">{HADITH_EDITION_LABELS[""]}</option>
@@ -1371,21 +1372,12 @@ export default function Home() {
                   </option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-0 size-3.5 pointer-events-none text-slate-400 shrink-0" aria-hidden />
+              <ChevronDown className="absolute right-0 size-3.5 pointer-events-none text-slate-400 dark:text-slate-500 shrink-0" aria-hidden />
             </div>
             <button
               type="button"
-              onClick={() => setVoiceArabic((v) => !v)}
-              className={`shrink-0 px-2 py-1 rounded-md text-xs font-github transition-colors ${voiceArabic ? "text-emerald-300 bg-emerald-500/20" : "text-slate-500 hover:text-slate-300 hover:bg-white/5"}`}
-              aria-label={voiceArabic ? "Voice: Arabic" : "Voice: auto"}
-              title={voiceArabic ? "Transcribe as Arabic (click to turn off)" : "Transcribe as Arabic (click for Arabic)"}
-            >
-              ع
-            </button>
-            <button
-              type="button"
               onClick={toggleVoiceInput}
-              className={`shrink-0 rounded-md transition-colors p-2 ring-1 ring-emerald-500/40 ${isRecording ? "text-red-400 bg-red-500/10" : "text-slate-400 hover:text-slate-200 hover:bg-white/5"}`}
+              className={`shrink-0 rounded-md transition-colors p-2 border border-slate-200/80 dark:border-slate-500/50 ${isRecording ? "text-red-600 bg-red-500/10" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"}`}
               aria-label={isRecording ? "Stop recording" : "Voice input"}
             >
               <Mic className="size-6" />
@@ -1394,7 +1386,7 @@ export default function Home() {
               type="button"
               onClick={() => void handleSearch()}
               disabled={isSearching}
-              className="shrink-0 p-1.5 text-emerald-400/90 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-md transition-colors disabled:opacity-50"
+              className="shrink-0 p-1.5 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20 rounded-md transition-colors disabled:opacity-50"
               aria-label="Search"
             >
               <ArrowRight className="size-5" />
@@ -1402,7 +1394,7 @@ export default function Home() {
           </div>
         </div>
         {transcribeError && (
-          <p className="mt-2 text-center text-sm text-amber-300/90 font-github">{transcribeError}</p>
+          <p className="mt-2 text-center text-sm text-amber-600 dark:text-amber-400 font-github">{transcribeError}</p>
         )}
         <div className="mt-4 flex flex-wrap justify-center gap-2">
           {INPUT_SUGGESTIONS.map((text) => (
@@ -1410,7 +1402,7 @@ export default function Home() {
               key={text}
               type="button"
               onClick={() => setQuery(text)}
-              className="rounded-full border border-slate-500/40 bg-slate-800/60 px-3 py-1.5 text-sm text-slate-200 font-github hover:border-slate-400/50 hover:bg-slate-700/50 hover:text-slate-100 transition-colors"
+              className="rounded-full border border-slate-200/80 dark:border-slate-500/50 bg-white/80 dark:bg-slate-800/60 px-3 py-1.5 text-sm text-slate-700 dark:text-slate-300 font-github shadow-sm hover:bg-slate-100 dark:hover:bg-slate-700 hover:border-slate-300/80 dark:hover:border-slate-500/60 transition-colors"
             >
               {text}
             </button>
@@ -1420,7 +1412,7 @@ export default function Home() {
           href={MUHIB_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-8 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-slate-200 hover:text-slate-100 font-github backdrop-blur-xl transition-all duration-300 shadow-[0_0_28px_rgba(212,175,55,0.25)] hover:shadow-[0_0_40px_rgba(212,175,55,0.4)] hover:border-white/20"
+          className="mt-8 inline-flex items-center gap-2 rounded-full border border-slate-200/80 dark:border-slate-500/50 bg-white/80 dark:bg-slate-800/60 px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-400/40 dark:hover:border-emerald-500/50 font-github backdrop-blur-xl shadow-[0_2px_12px_rgba(0,0,0,0.05)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.2)] transition-colors duration-200"
         >
           <span>Built by</span>
           <Image
@@ -1439,11 +1431,11 @@ export default function Home() {
           <p className="mt-6 text-center text-sm text-amber-300/90 font-github">{searchError}</p>
         )}
         {searchResult !== null && (
-          <section className="mt-8 w-full rounded-xl border border-slate-500/20 bg-slate-900/30 backdrop-blur-xl p-4 text-slate-200 font-github shadow-[0_0_24px_rgba(5,150,105,0.04)]">
+          <section className="mt-8 w-full rounded-2xl border border-slate-200/60 bg-white/90 backdrop-blur-xl p-4 text-slate-800 font-github shadow-[0_2px_24px_rgba(0,0,0,0.06)]">
             <h2 className="mb-2 text-xs font-medium text-slate-500 uppercase tracking-wider">From search</h2>
             {searchResult.name && (
               <p className="mb-2">
-                <span className="font-medium text-emerald-400/90">Name of Allah:</span> <span className="font-calligraphy">{searchResult.name.content}</span>
+                <span className="font-medium text-emerald-600 dark:text-emerald-400">Name of Allah:</span> <span className="font-calligraphy text-slate-800 dark:text-slate-200">{searchResult.name.content}</span>
               </p>
             )}
             {(() => {
@@ -1452,15 +1444,15 @@ export default function Home() {
               );
               return hadithList.length > 0 ? (
                 <div className="mb-2 space-y-2">
-                  <span className="font-medium text-emerald-400/90">Hadith (by relevance)</span>
+                  <span className="font-medium text-emerald-600 dark:text-emerald-400">Hadith (by relevance)</span>
                   {hadithList.slice(0, 3).map((h, i) => (
-                    <p key={h.id ?? i} className="font-calligraphy">
+                    <p key={h.id ?? i} className="font-calligraphy text-slate-800 dark:text-slate-200">
                       {h.content}
-                      <span className="ml-1 text-xs text-slate-500">({typeof h.metadata?.reference === "string" ? h.metadata.reference : ""})</span>
+                      <span className="ml-1 text-xs text-slate-500 dark:text-slate-400">({typeof h.metadata?.reference === "string" ? h.metadata.reference : ""})</span>
                     </p>
                   ))}
                   {hadithList.length > 3 && (
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       Also relevant: {hadithList.slice(3).map((h) => h.metadata?.reference).join(", ")}
                     </p>
                   )}
@@ -1470,7 +1462,7 @@ export default function Home() {
             {searchResult.quran?.content && (typeof searchResult.quran.metadata?.reference === "string" || typeof searchResult.quran.metadata?.surah === "string") && (
               <div className="mb-2">
                 <p className="font-calligraphy">
-                  <span className="font-medium text-emerald-400/90">Quran:</span> {searchResult.quran.content}
+                  <span className="font-medium text-emerald-600 dark:text-emerald-400">Quran:</span> {searchResult.quran.content}
                   <span className="ml-1 text-xs text-slate-500">
                     ({typeof searchResult.quran.metadata?.surah === "string" ? searchResult.quran.metadata.surah : ""} {typeof searchResult.quran.metadata?.reference === "string" ? searchResult.quran.metadata.reference : ""})
                   </span>
@@ -1479,7 +1471,7 @@ export default function Home() {
                   const key = `quran-${searchResult.quran?.id ?? searchResult.quran?.metadata?.reference ?? "current"}`;
                   if (!searchResult.quran?.content || !isArabicText(searchResult.quran.content)) return null;
                   return sourceTranslations[key] ? (
-                    <p className="text-sm text-slate-300 italic mt-1 font-github">{sourceTranslations[key]}</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 italic mt-1 font-github">{sourceTranslations[key]}</p>
                   ) : null;
                 })()}
               </div>
@@ -1487,14 +1479,14 @@ export default function Home() {
             {!searchResult.name &&
               !(searchResult.hadiths ?? (searchResult.hadith ? [searchResult.hadith] : [])).some((h) => typeof h.metadata?.reference === "string" && h.metadata.reference.trim() !== "") &&
               !(searchResult.quran?.content && (searchResult.quran.metadata?.reference || searchResult.quran.metadata?.surah)) && (
-              <p className="mb-2 text-slate-500 text-sm">No matching sources found; you can still refine your intention into a du'a.</p>
+              <p className="mb-2 text-slate-500 dark:text-slate-400 text-sm">No matching sources found; you can still refine your intention into a du'a.</p>
             )}
             {usedFailsafe && (
               <p className="mt-2 text-xs text-slate-500 font-github">Matched using online search.</p>
             )}
             <div className="mt-3 flex flex-wrap gap-2">
               <Button
-                className="font-github border-slate-500/40 text-slate-200 hover:bg-white/5"
+                className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                 variant="outline"
                 size="sm"
                 onClick={() => void handleRefine()}
@@ -1503,7 +1495,7 @@ export default function Home() {
                 {isRefining ? "Refining…" : "Refine into du'a"}
               </Button>
               <Button
-                className="font-github border-emerald-500/40 text-emerald-200 hover:bg-emerald-600/30"
+                className="font-github border-emerald-500/40 text-emerald-700 hover:bg-emerald-500/10"
                 variant="outline"
                 size="sm"
                 onClick={() => {
@@ -1548,8 +1540,8 @@ export default function Home() {
                 }
               />
             </div>
-            <section className="mt-6 w-full rounded-xl border border-slate-500/20 bg-slate-900/30 backdrop-blur-xl p-4 shadow-[0_0_24px_rgba(5,150,105,0.04)]">
-              <h2 className="mb-2 text-xs font-medium text-slate-500 uppercase tracking-wider font-github">Refined du'a</h2>
+            <section className="mt-6 w-full rounded-2xl border border-slate-200/60 dark:border-slate-500/30 bg-white/90 dark:bg-slate-800/50 backdrop-blur-xl p-4 shadow-[0_2px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_24px_rgba(0,0,0,0.3)]">
+              <h2 className="mb-2 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider font-github">Refined du'a</h2>
               {query.trim() && (
                 <p className="mb-2 text-xs text-slate-500 font-github italic">From: &ldquo;{query.trim()}&rdquo;</p>
               )}
@@ -1557,7 +1549,7 @@ export default function Home() {
                 ref={refinedContentRef}
                 onMouseUp={updateRefinedSelection}
                 onKeyUp={updateRefinedSelection}
-                className="text-slate-100 font-calligraphy text-lg leading-relaxed refined-dua-markdown"
+                className="text-slate-800 dark:text-slate-200 font-calligraphy text-lg leading-relaxed refined-dua-markdown"
               >
                 <ReactMarkdown
                   components={{
@@ -1574,7 +1566,7 @@ export default function Home() {
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 <Button
-                  className="font-github border-emerald-500/40 text-emerald-200 hover:bg-emerald-600/30"
+                  className="font-github border-emerald-500/40 text-emerald-700 hover:bg-emerald-500/10"
                   variant="outline"
                   size="sm"
                   onClick={handleAddToFavorites}
@@ -1583,7 +1575,7 @@ export default function Home() {
                   Add to favorites
                 </Button>
                 <Button
-                  className="font-github border-slate-500/40 text-slate-200 hover:bg-white/5"
+                  className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                   variant="outline"
                   size="sm"
                   onClick={handleSaveToLibrary}
@@ -1592,7 +1584,7 @@ export default function Home() {
                   {saved ? "Saved to Library" : "Save to Library"}
                 </Button>
                 <Button
-                  className="font-github border-slate-500/40 text-slate-200 hover:bg-white/5"
+                  className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                   variant="outline"
                   size="sm"
                   onClick={handleSaveSelectionToLibrary}
@@ -1601,7 +1593,7 @@ export default function Home() {
                   {savedSelectionFeedback ? "Saved selection to Library" : "Save selection to Library"}
                 </Button>
                 <Button
-                  className="font-github border-slate-500/40 text-slate-200 hover:bg-white/5"
+                  className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                   variant="outline"
                   size="sm"
                   onClick={openShareModal}
@@ -1611,7 +1603,7 @@ export default function Home() {
                   Share
                 </Button>
                 <Button
-                  className="font-github border-slate-500/40 text-slate-200 hover:bg-white/5"
+                  className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                   variant="outline"
                   size="sm"
                   onClick={handleCopyForDuaOS}
@@ -1636,18 +1628,18 @@ export default function Home() {
           onClick={() => !importSuccess && setImportModalOpen(false)}
         >
           <div
-            className="relative w-full max-w-md rounded-2xl border border-slate-500/30 bg-slate-900/95 p-6 shadow-xl"
+            className="relative w-full max-w-md rounded-2xl border border-slate-200/60 dark:border-slate-500/30 bg-white/95 dark:bg-slate-900/95 p-6 shadow-[0_4px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               type="button"
               onClick={() => !importSuccess && setImportModalOpen(false)}
-              className="absolute top-4 right-4 p-1 rounded-md text-slate-400 hover:text-slate-200 hover:bg-white/5"
+              className="absolute top-4 right-4 p-1 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
               aria-label="Close"
             >
               <X className="size-5" />
             </button>
-            <h2 id="import-modal-title" className="text-lg font-semibold text-slate-100 font-github mb-2">
+            <h2 id="import-modal-title" className="text-lg font-semibold text-slate-800 dark:text-slate-100 font-github mb-2">
               Import to Library
             </h2>
             <p className="text-sm text-slate-400 font-github mb-3">
@@ -1657,7 +1649,7 @@ export default function Home() {
               value={importInput}
               onChange={(e) => { setImportInput(e.target.value); setImportError(null); }}
               placeholder='Paste here or use "Choose file" below...'
-              className="w-full h-32 rounded-lg border border-slate-500/40 bg-slate-800/60 text-slate-100 font-github text-sm p-3 resize-y placeholder:text-slate-500"
+              className="w-full h-32 rounded-lg border border-slate-200/80 bg-slate-50/80 text-slate-800 font-github text-sm p-3 resize-y placeholder:text-slate-500"
               aria-label="Paste import content"
             />
             <input
@@ -1665,7 +1657,7 @@ export default function Home() {
               type="file"
               accept=".json,.txt,application/json,text/plain"
               onChange={handleImportFileChange}
-              className="mt-2 text-sm text-slate-400 font-github file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-emerald-500/20 file:text-emerald-200"
+              className="mt-2 text-sm text-slate-500 dark:text-slate-400 font-github file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-emerald-500/20 file:text-emerald-700 dark:file:text-emerald-300"
               aria-label="Choose file to import"
             />
             {importError && <p className="mt-2 text-sm text-red-300 font-github">{importError}</p>}

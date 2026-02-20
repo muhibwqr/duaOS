@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { EB_Garamond, Quicksand, Amiri } from "next/font/google";
 import "./globals.css";
 import RamadanBackground from "@/components/RamadanBackground";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 const garamond = EB_Garamond({
   variable: "--font-apple-garamond",
@@ -62,11 +63,24 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const themeScript = `
+(function(){
+  var t=localStorage.getItem('duaos-theme');
+  var d=t==='dark'||(t!=='light'&&typeof window!=='undefined'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.classList.toggle('dark',!!d);
+})();
+  `.trim();
+
   return (
-    <html lang="en" className="dark">
-      <body className={`${garamond.variable} ${quicksand.variable} ${amiri.variable} font-serif antialiased relative min-h-screen text-slate-200`}>
-        <RamadanBackground />
-        <div className="relative z-10">{children}</div>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body className={`${garamond.variable} ${quicksand.variable} ${amiri.variable} font-serif antialiased relative min-h-screen text-foreground bg-background`}>
+        <ThemeProvider>
+          <RamadanBackground />
+          <div className="relative z-10">{children}</div>
+        </ThemeProvider>
       </body>
     </html>
   );
