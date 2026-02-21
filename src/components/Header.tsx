@@ -60,10 +60,10 @@ export function Header({ favoritesCount = 0, onCartClick }: HeaderProps) {
             <button
               type="button"
               onClick={() => setTheme(resolvedDark ? "light" : "dark")}
-              className="rounded-xl border border-slate-200/80 dark:border-slate-600/50 bg-slate-100/80 dark:bg-slate-800/80 p-2 sm:p-2.5 text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-200/60 dark:hover:bg-slate-700/60 transition-colors min-h-[44px] min-w-[44px]"
+              className="rounded-xl border border-slate-200/80 dark:border-slate-600/50 bg-slate-100/80 dark:bg-slate-800/80 p-2 sm:p-2.5 text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-200/60 dark:hover:bg-slate-700/60 transition-colors min-h-[44px] min-w-[44px] mx-0"
               aria-label={resolvedDark ? "Switch to light mode" : "Switch to dark mode"}
             >
-              {resolvedDark ? <Sun className="size-5" /> : <Moon className="size-5" />}
+              {resolvedDark ? <Sun className="size-5 mx-auto" /> : <Moon className="size-5" />}
             </button>
             <a
               href={GITHUB_REPO_URL}
