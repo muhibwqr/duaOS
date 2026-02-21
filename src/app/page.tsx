@@ -1334,7 +1334,7 @@ export default function Home() {
         <h1 className="font-serif text-xl sm:text-2xl text-slate-800 dark:text-slate-100 text-center mb-4 sm:mb-6 leading-relaxed mt-2 sm:mt-4 px-1">
           What do you want to make du'a for today?
         </h1>
-        <div className="group w-full flex items-end gap-2 rounded-2xl border border-slate-200/80 dark:border-slate-500/40 bg-white/90 dark:bg-slate-800/60 px-4 py-3 min-h-[52px] backdrop-blur-xl transition-all duration-200 shadow-[0_2px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_24px_rgba(0,0,0,0.3)] hover:border-emerald-400/40 dark:hover:border-emerald-500/50">
+        <div className="group w-full flex items-center gap-2 rounded-2xl border border-slate-200/80 dark:border-slate-500/40 bg-white/90 dark:bg-slate-800/60 px-4 py-3 min-h-[52px] backdrop-blur-xl transition-all duration-200 shadow-[0_2px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_24px_rgba(0,0,0,0.3)] hover:border-emerald-400/40 dark:hover:border-emerald-500/50">
           <div className="flex-1 min-w-0 relative flex items-center">
             <input
               type="text"
@@ -1342,11 +1342,11 @@ export default function Home() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              className="w-full bg-transparent text-slate-800 dark:text-slate-200 text-base font-calligraphy outline-none placeholder:text-slate-500 dark:placeholder:text-slate-400 py-1"
+              className="w-full bg-transparent text-slate-800 dark:text-slate-200 text-sm sm:text-base font-calligraphy outline-none placeholder:text-slate-500 dark:placeholder:text-slate-400 py-1"
             />
             {!query && (
               <div
-                className="absolute inset-0 flex items-center pointer-events-none text-slate-500 font-calligraphy text-base transition-opacity ease-in-out"
+                className="absolute inset-0 flex items-center pointer-events-none text-slate-500 font-calligraphy text-sm sm:text-base transition-opacity ease-in-out "
                 style={{
                   opacity: placeholderVisible ? 1 : 0,
                   transitionDuration: `${PLACEHOLDER_FADE_MS}ms`,
@@ -1367,7 +1367,7 @@ export default function Home() {
               >
                 <option value="">{HADITH_EDITION_LABELS[""]}</option>
                 {availableEditions.map((e) => (
-                  <option key={e} value={e}>
+                  <option key={e} value={e} className="font-black">
                     {HADITH_EDITION_LABELS[e] ?? e}
                   </option>
                 ))}
@@ -1386,7 +1386,7 @@ export default function Home() {
               type="button"
               onClick={() => void handleSearch()}
               disabled={isSearching}
-              className="shrink-0 p-1.5 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20 rounded-md transition-colors disabled:opacity-50"
+              className="hidden sm:inline-flex shrink-0 p-1.5 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20 rounded-md transition-colors disabled:opacity-50"
               aria-label="Search"
             >
               <ArrowRight className="size-5" />
