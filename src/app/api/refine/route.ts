@@ -2,6 +2,10 @@ import { duaAgent, DUAOS_AGENT_BASE_PROMPT } from "@/mastra/agents/dua-agent";
 import { refineBodySchema } from "@/lib/validation";
 import { rateLimitRefine } from "@/lib/rate-limit";
 import { NAMES_OF_ALLAH_REFINE_CONTEXT } from "@/data/names-context";
+import {
+  BASE_DUA_NEED_OF_GOOD,
+  shouldIncludeBaseDuaNeedOfGood,
+} from "@/lib/refine-context";
 
 /** Refine runs on Node runtime because @mastra/core uses Node 'stream' module. */
 export async function POST(req: Request) {
@@ -53,12 +57,17 @@ export async function POST(req: Request) {
     const contextLines: string[] = [];
     if (nameOfAllah?.trim()) contextLines.push(`Name of Allah: ${nameOfAllah.trim()}`);
     if (quran?.trim()) {
-      const verses = quran.trim().split("\n\n").filter(Boolean);
+      let verses = quran.trim().split("\n\n").filter(Boolean);
+      if (shouldIncludeBaseDuaNeedOfGood(userInput) && !verses.some((v) => v.includes("28:24") || v.includes("Al-Qasas"))) {
+        verses = [BASE_DUA_NEED_OF_GOOD, ...verses];
+      }
       if (verses.length === 1) {
         contextLines.push(`Quranic Verse (with citation):\n${verses[0]}`);
       } else {
         contextLines.push(`Quranic Verses (with citations):\n${verses.map((v, i) => `${i + 1}. ${v}`).join("\n")}`);
       }
+    } else if (shouldIncludeBaseDuaNeedOfGood(userInput)) {
+      contextLines.push(`Quranic Verse (with citation):\n${BASE_DUA_NEED_OF_GOOD}`);
     }
     if (hadith?.trim()) {
       const parts = hadith.trim().split("\n\n").filter(Boolean);

@@ -1084,12 +1084,12 @@ export default function Home() {
               </div>
             )}
           </div>
-          <div className="flex items-center gap-1 shrink-0 flex-wrap sm:flex-nowrap">
+          <div className="flex items-center gap-1 shrink-0 flex-nowrap">
             <div className="relative flex items-center font-github text-sm min-w-0">
               <select
                 value={edition}
                 onChange={(e) => setEdition(e.target.value)}
-                className="appearance-none bg-transparent pr-5 py-1 outline-none cursor-pointer text-slate-700 dark:text-slate-300 text-sm min-w-0 max-w-[140px]"
+                className="appearance-none bg-transparent pr-5 py-1 outline-none cursor-pointer text-slate-700 dark:text-slate-300 text-sm min-w-0 max-w-[120px] sm:max-w-[140px]"
                 aria-label="Hadith book"
               >
                 <option value="">{HADITH_EDITION_LABELS[""]}</option>
@@ -1113,13 +1113,22 @@ export default function Home() {
               type="button"
               onClick={() => void runSearch()}
               disabled={isSearching}
-              className="hidden sm:inline-flex shrink-0 p-1.5 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20 rounded-md transition-colors disabled:opacity-50"
+              className="inline-flex shrink-0 p-2 sm:p-1.5 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20 rounded-md transition-colors disabled:opacity-50 touch-manipulation"
               aria-label="Search"
             >
               <ArrowRight className="size-5" />
             </button>
           </div>
         </div>
+        {/* Mobile: full-width Search CTA so the button is always visible */}
+        <Button
+          type="button"
+          className="sm:hidden w-full mt-3 font-github bg-emerald-600 hover:bg-emerald-500 text-white border-0 shadow-[0_2px_12px_rgba(5,150,105,0.3)]"
+          onClick={() => void runSearch()}
+          disabled={isSearching}
+        >
+          {isSearching ? "Searching…" : "Find du'a"}
+        </Button>
         {transcribeError && (
           <p className="mt-2 text-center text-sm text-amber-600 dark:text-amber-400 font-github">{transcribeError}</p>
         )}
