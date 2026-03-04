@@ -121,7 +121,7 @@ flowchart LR
 - **No secrets in the frontend:** The app only calls relative URLs (`/api/search`, `/api/refine`). All credentials are read server-side from env; nothing sensitive is in the client bundle.
 - **Input validation:** Request bodies are validated with Zod (type, length, trim). Search query and refine input have max lengths to prevent abuse and stay within model limits.
 - **SQL injection:** The database is only called via parameterized RPC (`match_documents` with a vector and typed params). User text is never concatenated into SQL.
-- **Rate limiting:** In-memory limits by IP: 20 requests/min for search, 10/min for refine. Responses use `429 Too Many Requests` and `Retry-After` when exceeded. For production at scale, use a shared store (e.g. Redis/Upstash).
+- **Rate limiting:** In-memory limits by IP: 20 requests/min for search, 10/min for refine. Responses use `429 Too Many Requests` and `Retry-After` when exceeded. On multi-instance or Edge deployments, limits are per instance. For production at scale, use a shared store (e.g. [Upstash Redis](https://upstash.com/redis)): set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` and switch `src/lib/rate-limit.ts` to use `@upstash/ratelimit` when those env vars are present.
 - **Error messages:** API responses return generic messages (e.g. "Search failed.") and do not leak internal details or stack traces.
 
 ## Personal Ledger

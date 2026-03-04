@@ -4,8 +4,18 @@ import OpenAI from "openai";
 import { searchBodySchema, HADITH_EDITIONS } from "@/lib/validation";
 import { rateLimitSearch } from "@/lib/rate-limit";
 import { enrichQuery } from "@/lib/query-enrichment";
+import {
+  isShortQuery,
+  generateHypotheticalDocument,
+  blendEmbeddings,
+} from "@/lib/hyde";
 import { reRankForDuaIntent, type MatchRow } from "@/lib/rerank-dua-intent";
 import { selectRelevantDuas, applySelectedIds } from "@/lib/llm-select-dua";
+import { localMatch } from "@/lib/local-match";
+import { keywordOverlapScore, blendHybridScore } from "@/lib/hybrid-score";
+import namesOfAllah from "@/data/names-of-allah.json";
+
+export const runtime = "edge";
 
 export async function POST(req: Request) {
   try {
@@ -49,6 +59,8 @@ export async function POST(req: Request) {
     const openai = new OpenAI({ apiKey });
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    const localNameResult = localMatch(trimmedQuery, namesOfAllah as { arabic: string; english: string; meaning: string; tags: string[] }[]);
+
     const enrichedQuery = enrichQuery(query);
     const {
       data: [embeddingData],
@@ -56,10 +68,29 @@ export async function POST(req: Request) {
       model: "text-embedding-3-small",
       input: enrichedQuery,
     });
-    const queryEmbedding = embeddingData.embedding;
-    const minSimilarity = 0.35;
-    const dynamicThreshold = trimmedQuery.length > 30 ? 0.3 : Math.max(0.3, 0.4 - trimmedQuery.length / 200);
-    const matchCount = 25;
+    let queryEmbedding = embeddingData.embedding;
+
+    if (isShortQuery(trimmedQuery)) {
+      try {
+        const hydeText = await generateHypotheticalDocument(openai, trimmedQuery);
+        if (hydeText) {
+          const {
+            data: [hydeEmbeddingData],
+          } = await openai.embeddings.create({
+            model: "text-embedding-3-small",
+            input: hydeText,
+          });
+          if (hydeEmbeddingData?.embedding)
+            queryEmbedding = blendEmbeddings(queryEmbedding, hydeEmbeddingData.embedding);
+        }
+      } catch (e) {
+        console.warn("HyDE generation failed, using query embedding only:", e);
+      }
+    }
+    const minSimilarity = 0.38;
+    const matchCount = 35;
+    const dynamicThreshold =
+      trimmedQuery.length > 30 ? 0.3 : trimmedQuery.length < 15 ? 0.28 : Math.max(0.28, 0.4 - trimmedQuery.length / 200);
 
     const { data: matches, error } = await supabase.rpc("match_documents", {
       query_embedding: queryEmbedding,
@@ -82,16 +113,21 @@ export async function POST(req: Request) {
 
     const raw = (matches ?? []) as MatchRow[];
     const withIntentScores = reRankForDuaIntent(raw);
-    const reranked = [...withIntentScores]
+    const withHybrid = withIntentScores.map((m) => {
+      const sim = m.similarity ?? 0;
+      const kw = keywordOverlapScore(trimmedQuery, m.content);
+      return { ...m, similarity: blendHybridScore(sim, kw) };
+    });
+    const reranked = [...withHybrid]
       .filter((m) => (m.similarity ?? 0) >= minSimilarity)
       .sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0));
 
     const names = reranked.filter((m) => m.metadata?.type === "name");
-    let hadiths = reranked.filter((m) => m.metadata?.type === "hadith");
+    let hadiths: MatchRow[] = reranked.filter((m) => m.metadata?.type === "hadith");
     if (preferredEdition) {
       hadiths = hadiths.filter((m) => m.metadata?.edition === preferredEdition);
     }
-    let quranVerses = reranked.filter((m) => m.metadata?.type === "quran");
+    let quranVerses: MatchRow[] = reranked.filter((m) => m.metadata?.type === "quran");
 
     const hasHadithSource = (m: MatchRow) => typeof m.metadata?.reference === "string" && m.metadata.reference.trim() !== "" || typeof m.metadata?.edition === "string";
     const hasQuranSource = (m: MatchRow) => typeof m.metadata?.reference === "string" && m.metadata.reference.trim() !== "" || typeof m.metadata?.surah === "string";
@@ -130,7 +166,10 @@ export async function POST(req: Request) {
         : Promise.resolve({ data: [] }),
     ]);
 
-    let nameResult = names[0] ?? (nameFallbackRes.data ?? [])[0] ?? null;
+    let nameResult: MatchRow | null = names[0] ?? (nameFallbackRes.data ?? [])[0] ?? null;
+    if (localNameResult && (!nameResult || (nameResult.similarity ?? 0) < 0.5)) {
+      nameResult = { ...localNameResult.name, similarity: 1 };
+    }
     if (needHadith) {
       const fallback = (hadithFallbackRes.data ?? []) as MatchRow[];
       hadiths = fallback.filter(hasHadithSource);

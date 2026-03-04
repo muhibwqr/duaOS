@@ -4,6 +4,8 @@ import OpenAI from "openai";
 import { storeDuaBodySchema } from "@/lib/validation";
 import { rateLimitDuas } from "@/lib/rate-limit";
 
+export const runtime = "edge";
+
 export async function POST(req: Request) {
   try {
     const rate = rateLimitDuas(req);

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { rateLimitSearch } from "@/lib/rate-limit";
 
+export const runtime = "edge";
+
 const MAX_TEXT_LENGTH = 4000;
 
 export async function POST(req: Request) {

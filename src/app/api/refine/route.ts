@@ -3,6 +3,7 @@ import { refineBodySchema } from "@/lib/validation";
 import { rateLimitRefine } from "@/lib/rate-limit";
 import { NAMES_OF_ALLAH_REFINE_CONTEXT } from "@/data/names-context";
 
+/** Refine runs on Node runtime because @mastra/core uses Node 'stream' module. */
 export async function POST(req: Request) {
   try {
     const rate = rateLimitRefine(req);
@@ -78,7 +79,10 @@ export async function POST(req: Request) {
 
     const result = await duaAgent.stream(
       [{ role: "user", content: userMessage }],
-      { instructions: fullSystemMessage }
+      {
+        instructions: fullSystemMessage,
+        modelSettings: { maxOutputTokens: 1024, temperature: 0.4 },
+      }
     );
 
     const textStream = result.textStream;

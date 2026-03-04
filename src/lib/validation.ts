@@ -1,11 +1,12 @@
 import { z } from "zod";
 
 /** Max lengths to prevent abuse and stay within model limits */
-const MAX_QUERY_LENGTH = 2000;
+export const MAX_QUERY_LENGTH = 2000;
 const MAX_USER_INPUT_LENGTH = 5000;
-const MAX_CONTEXT_LENGTH = 2000;
 /** Refine can accept multiple hadith (full text + refs); allow longer than single-context limit */
 export const MAX_HADITH_CONTEXT_LENGTH = 5000;
+export const MAX_CONTEXT_LENGTH = 2000;
+export const MAX_REFINE_INPUT_LENGTH = MAX_USER_INPUT_LENGTH;
 
 const safeString = (maxLen: number) =>
   z

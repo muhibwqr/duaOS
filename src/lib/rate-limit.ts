@@ -1,6 +1,11 @@
 /**
  * In-memory rate limiter by IP.
- * Resets on server restart. For production at scale, use Redis (e.g. Upstash).
+ * Resets on server restart.
+ *
+ * Production: For multi-instance deployments (e.g. Vercel Edge), in-memory
+ * limits are per instance, so effective limits are higher. Use a shared store
+ * (e.g. Upstash Redis) with @upstash/ratelimit and set UPSTASH_REDIS_REST_URL
+ * + UPSTASH_REDIS_REST_TOKEN to get global rate limiting.
  */
 
 const WINDOW_MS = 60 * 1000; // 1 minute

@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# remotion launch video render output
+/launch-video/out/
+
 # production
 /build
 

@@ -9,9 +9,26 @@ import { Header } from "@/components/Header";
 import { KofiBanner } from "@/components/KofiBanner";
 import { Button } from "@/components/ui/button";
 import { DuaShareCard } from "@/components/DuaShareCard";
-import { HADITH_EDITIONS, HADITH_EDITION_LABELS, MAX_HADITH_CONTEXT_LENGTH } from "@/lib/validation";
-import { localMatch } from "@/lib/local-match";
-import namesOfAllah from "@/data/names-of-allah.json";
+import { HADITH_EDITIONS, HADITH_EDITION_LABELS } from "@/lib/validation";
+import { useRefine } from "@/hooks/useRefine";
+import { useSearch } from "@/hooks/useSearch";
+import {
+  getLibrary,
+  saveToLibrary,
+  removeFromLibrary,
+  getFavorites,
+  addToFavorites,
+  removeFromFavorites,
+  clearFavorites,
+  mergeIntoLibrary,
+  exportLibraryAsDuaOSJson,
+  parseDuaOSImport,
+  LIBRARY_KEY,
+  FAVORITES_KEY,
+  MAX_FAVORITES_ITEMS,
+  DUAOS_EXPORT_VERSION,
+} from "@/lib/library-storage";
+import type { Intent, SearchResult, SearchResultItem, LibraryEntry, FavoriteItem } from "@/types/dua";
 
 /** Strip markdown to plain text for share card image (reliable PNG capture). */
 function stripMarkdownForShare(text: string): string {
@@ -35,34 +52,6 @@ function extractPersonalDua(refinedDua: string): string {
 const MUHIB_URL = "https://muhibwaqar.com";
 const HADITH_EDITION_STORAGE_KEY = "duaos-hadith-edition";
 
-type Intent = "problem" | "refine" | "goal";
-
-type SearchResultItem = { id: string; content: string; metadata: Record<string, unknown> };
-
-type SearchResult = {
-  name: SearchResultItem | null;
-  hadith: SearchResultItem | null;
-  hadiths: SearchResultItem[];
-  quran?: SearchResultItem | null;
-  quranVerses?: SearchResultItem[];
-};
-
-type LibraryEntry = { dua: string; name?: string; at: string };
-
-type FavoriteItem = {
-  id: string;
-  dua: string;
-  nameOfAllah?: string;
-  hadithSnippet?: string;
-  addedAt: string;
-};
-
-const LIBRARY_KEY = "duaos-library";
-const FAVORITES_KEY = "duaos-favorites";
-const MAX_FAVORITES_ITEMS = 50;
-/** Match server limits so we don't send oversized payloads (server validates anyway). */
-const MAX_QUERY_LENGTH = 2000;
-
 /** Three suggestion pills below the input: fill the box only, no API call. */
 const INPUT_SUGGESTIONS: readonly string[] = [
   "Guidance in a difficult decision",
@@ -75,143 +64,6 @@ const PLACEHOLDER_FADE_MS = 400;
 const MAX_REFINE_INPUT_LENGTH = 5000;
 const MAX_CONTEXT_LENGTH = 2000;
 const ARABIC_TEXT_RE = /[\u0600-\u06FF]/;
-
-function getLibrary(): LibraryEntry[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(LIBRARY_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveToLibrary(dua: string, name?: string) {
-  try {
-    const raw = typeof window !== "undefined" ? localStorage.getItem(LIBRARY_KEY) : null;
-    const list: { dua: string; name?: string; at: string }[] = raw ? JSON.parse(raw) : [];
-    list.push({ dua, name, at: new Date().toISOString() });
-    localStorage.setItem(LIBRARY_KEY, JSON.stringify(list));
-  } catch (e) {
-    console.error("Save to library failed", e);
-  }
-}
-
-function removeFromLibrary(entry: LibraryEntry): LibraryEntry[] {
-  try {
-    const list = getLibrary().filter((e) => e.at !== entry.at || e.dua !== entry.dua);
-    if (typeof window !== "undefined") localStorage.setItem(LIBRARY_KEY, JSON.stringify(list));
-    return list;
-  } catch (e) {
-    console.error("Remove from library failed", e);
-    return getLibrary();
-  }
-}
-
-function getFavorites(): FavoriteItem[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(FAVORITES_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function setFavorites(items: FavoriteItem[]) {
-  try {
-    const list = items.slice(-MAX_FAVORITES_ITEMS);
-    if (typeof window !== "undefined") localStorage.setItem(FAVORITES_KEY, JSON.stringify(list));
-  } catch (e) {
-    console.error("Set favorites failed", e);
-  }
-}
-
-function addToFavorites(item: Omit<FavoriteItem, "id" | "addedAt">) {
-  const list = getFavorites();
-  list.push({
-    ...item,
-    id: crypto.randomUUID(),
-    addedAt: new Date().toISOString(),
-  });
-  setFavorites(list);
-  return list;
-}
-
-function removeFromFavorites(id: string) {
-  const list = getFavorites().filter((e) => e.id !== id);
-  setFavorites(list);
-  return list;
-}
-
-const DUAOS_EXPORT_VERSION = 1;
-
-/** Serialize library + favorites to DuaOS JSON format for import by others. */
-function exportLibraryAsDuaOSJson(library: LibraryEntry[], favorites: FavoriteItem[]): string {
-  const entries: { dua: string; name?: string; at: string }[] = [
-    ...[...favorites].reverse().map((f) => ({ dua: f.dua, name: f.nameOfAllah, at: f.addedAt })),
-    ...[...library].reverse().map((e) => ({ dua: e.dua, name: e.name, at: e.at })),
-  ];
-  return JSON.stringify({ duaos: "library", version: DUAOS_EXPORT_VERSION, entries });
-}
-
-/** Parse pasted/file content: DuaOS JSON or plain-text list. Returns entries to merge or null on failure. */
-function parseDuaOSImport(raw: string): LibraryEntry[] | null {
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-  try {
-    const data = JSON.parse(trimmed) as { duaos?: string; entries?: unknown[] };
-    if (data.duaos === "library" && Array.isArray(data.entries)) {
-      const entries: LibraryEntry[] = [];
-      for (const e of data.entries) {
-        const item = e as { dua?: unknown; name?: unknown; at?: unknown };
-        if (typeof item.dua !== "string" || !item.dua.trim()) continue;
-        entries.push({
-          dua: item.dua.trim(),
-          name: typeof item.name === "string" ? item.name.trim() || undefined : undefined,
-          at: typeof item.at === "string" ? item.at : new Date().toISOString(),
-        });
-      }
-      return entries;
-    }
-  } catch {
-    // not JSON, try plain-text format (My du'a list — Du'aOS, then blocks of du'a + "— Name")
-  }
-  const lines = trimmed.split("\n");
-  const entries: LibraryEntry[] = [];
-  let currentDua = "";
-  const flush = (name?: string) => {
-    if (currentDua.trim()) {
-      entries.push({ dua: currentDua.trim(), name: name?.trim() || undefined, at: new Date().toISOString() });
-    }
-    currentDua = "";
-  };
-  const isTitleLine = (line: string) => /du'a list/i.test(line) && /duaos/i.test(line);
-  for (const line of lines) {
-    if (line.startsWith("— ")) {
-      const name = line.slice(2).trim();
-      flush(name);
-    } else if (line.trim() === "") {
-      flush();
-    } else if (!isTitleLine(line)) {
-      currentDua += (currentDua ? "\n" : "") + line;
-    }
-  }
-  flush();
-  return entries.length > 0 ? entries : null;
-}
-
-/** Merge entries into library (one read, append, one write). */
-function mergeIntoLibrary(entries: LibraryEntry[]): void {
-  if (typeof window === "undefined" || entries.length === 0) return;
-  const raw = localStorage.getItem(LIBRARY_KEY);
-  const list: LibraryEntry[] = raw ? JSON.parse(raw) : [];
-  const now = new Date().toISOString();
-  for (const e of entries) {
-    list.push({ dua: e.dua, name: e.name, at: e.at || now });
-  }
-  localStorage.setItem(LIBRARY_KEY, JSON.stringify(list));
-}
 
 /** Fire-and-forget: store du'a on server for counter and similarity. Does not block UI. */
 function storeDuaOnServer(payload: {
@@ -232,8 +84,6 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
   const [refinedDua, setRefinedDua] = useState("");
-  const [isSearching, setIsSearching] = useState(false);
-  const [isRefining, setIsRefining] = useState(false);
   const [saved, setSaved] = useState(false);
   const [library, setLibrary] = useState<LibraryEntry[]>([]);
   const [favorites, setFavoritesState] = useState<FavoriteItem[]>([]);
@@ -241,7 +91,15 @@ export default function Home() {
   const [listShareFeedback, setListShareFeedback] = useState<"copied" | "shared" | null>(null);
   const [suggestionIndex, setSuggestionIndex] = useState(0);
   const [placeholderVisible, setPlaceholderVisible] = useState(true);
-  const [searchError, setSearchError] = useState<string | null>(null);
+  const [usedFailsafe, setUsedFailsafe] = useState(false);
+
+  const { handleSearch, isSearching, searchError, setSearchError } = useSearch(
+    setSearchResult,
+    setRefinedDua,
+    setUsedFailsafe
+  );
+  const { handleRefine, isRefining } = useRefine(setRefinedDua, setSaved);
+
   const [isRecording, setIsRecording] = useState(false);
   const [transcribeError, setTranscribeError] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -252,7 +110,6 @@ export default function Home() {
   const [shareModalStep, setShareModalStep] = useState<"intention" | "options">("intention");
   const [shareError, setShareError] = useState<string | null>(null);
   const sharePngRef = useRef<string | null>(null);
-  const [usedFailsafe, setUsedFailsafe] = useState(false);
   const [sourcesPopupOpen, setSourcesPopupOpen] = useState(false);
   const [sourceTranslations, setSourceTranslations] = useState<Record<string, string>>({});
   const [translatingSource, setTranslatingSource] = useState<Record<string, boolean>>({});
@@ -340,60 +197,11 @@ export default function Home() {
     return () => clearInterval(id);
   }, []);
 
-  async function handleSearch(overrideQuery?: string) {
-    const q = (overrideQuery ?? query).trim().slice(0, MAX_QUERY_LENGTH);
+  function runSearch(overrideQuery?: string) {
+    const q = (overrideQuery ?? query).trim();
     if (!q) return;
     if (overrideQuery) setQuery(overrideQuery);
-    setSearchResult(null);
-    setSearchError(null);
-    setRefinedDua("");
-
-    const local = localMatch(q, namesOfAllah as { arabic: string; english: string; meaning: string; tags: string[] }[]);
-
-    setIsSearching(true);
-    try {
-      const res = await fetch("/api/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: q, intent, edition: edition || undefined }),
-      });
-      const text = await res.text();
-      if (!res.ok) {
-        let msg = text;
-        try {
-          const j = JSON.parse(text);
-          if (j.error) msg = j.error;
-        } catch {
-          // use raw text
-        }
-        setSearchError(msg);
-        setSearchResult({ name: null, hadith: null, hadiths: [] });
-        return;
-      }
-      const data = JSON.parse(text);
-      const hadithList = Array.isArray(data.hadiths) ? data.hadiths : (data.hadith ? [data.hadith] : []);
-      setUsedFailsafe(true);
-      const quranList = Array.isArray(data.quranVerses) ? data.quranVerses : (data.quran ? [data.quran] : []);
-      setSearchResult({
-        name: data.name ?? local?.name ?? null,
-        hadith: data.hadith ?? hadithList[0] ?? null,
-        hadiths: hadithList,
-        quran: data.quran ?? null,
-        quranVerses: quranList,
-      });
-    } catch (e) {
-      console.error(e);
-      if (local) {
-        setUsedFailsafe(false);
-        setSearchError("Search service unavailable. Showing local Name match.");
-        setSearchResult({ name: local.name, hadith: local.hadith, hadiths: [], quran: local.quran ?? null });
-      } else {
-        setSearchError(e instanceof Error ? e.message : "Search failed. Check your connection and try again.");
-        setSearchResult({ name: null, hadith: null, hadiths: [] });
-      }
-    } finally {
-      setIsSearching(false);
-    }
+    void handleSearch(overrideQuery ?? query, intent, edition);
   }
 
   function isArabicText(text: string): boolean {
@@ -425,87 +233,6 @@ export default function Home() {
     const key = `quran-${q.id ?? q.metadata?.reference ?? "current"}`;
     void ensureSourceTranslation(key, q.content);
   }, [searchResult?.quran?.id, searchResult?.quran?.content]);
-
-  function buildHadithContext(hadiths: SearchResultItem[]): string {
-    const withRef = hadiths.filter((m) => typeof m.metadata?.reference === "string" && m.metadata.reference.trim() !== "");
-    if (!withRef.length) return "";
-    const ref = (m: SearchResultItem) => (typeof m.metadata?.reference === "string" ? m.metadata.reference : "");
-    const parts: string[] = [];
-    const showFull = 3;
-    for (let i = 0; i < withRef.length; i++) {
-      if (i < showFull) {
-        const r = ref(withRef[i]);
-        parts.push(r ? `${withRef[i].content} [${r}]` : withRef[i].content);
-      } else {
-        parts.push(ref(withRef[i]) || `Hadith ${i + 1}`);
-      }
-    }
-    const moreRefs = withRef.length > showFull
-      ? `\nAlso relevant (by relevance): ${parts.slice(showFull).join(", ")}`
-      : "";
-    return (parts.slice(0, showFull).join("\n\n") + moreRefs).slice(0, MAX_HADITH_CONTEXT_LENGTH);
-  }
-
-  function buildQuranContext(verses: SearchResultItem[]): string {
-    const withRef = verses.filter(
-      (v) =>
-        (typeof v.metadata?.reference === "string" && v.metadata.reference.trim() !== "") ||
-        (typeof v.metadata?.surah === "string" && v.metadata.surah.trim() !== "")
-    );
-    if (!withRef.length) return "";
-    const parts: string[] = [];
-    for (let i = 0; i < Math.min(withRef.length, 5); i++) {
-      const v = withRef[i];
-      const surah = typeof v.metadata?.surah === "string" ? v.metadata.surah : "";
-      const ref = typeof v.metadata?.reference === "string" ? v.metadata.reference : "";
-      const source = [surah, ref].filter(Boolean).join(" ").trim();
-      parts.push(source ? `${v.content} [${source}]` : v.content);
-    }
-    return parts.join("\n\n").slice(0, MAX_HADITH_CONTEXT_LENGTH);
-  }
-
-  async function handleRefine() {
-    const text = (query.trim() || refinedDua).slice(0, MAX_REFINE_INPUT_LENGTH);
-    if (!text) return;
-    const nameContent = (searchResult?.name?.content ?? "").slice(0, MAX_CONTEXT_LENGTH);
-    const hadiths = searchResult?.hadiths ?? (searchResult?.hadith ? [searchResult.hadith] : []);
-    const hadithContent = buildHadithContext(hadiths);
-    const quranVerses = searchResult?.quranVerses ?? (searchResult?.quran ? [searchResult.quran] : []);
-    const quranContent = buildQuranContext(quranVerses);
-    setIsRefining(true);
-    setRefinedDua("");
-    setSaved(false);
-    try {
-      const res = await fetch("/api/refine", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userInput: text,
-          nameOfAllah: nameContent || undefined,
-          hadith: hadithContent || undefined,
-          quran: quranContent || undefined,
-        }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const reader = res.body?.getReader();
-      const decoder = new TextDecoder();
-      let out = "";
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          out += chunk;
-          setRefinedDua(out);
-        }
-      }
-    } catch (e) {
-      console.error(e);
-      setRefinedDua("Refinement failed. Check the console.");
-    } finally {
-      setIsRefining(false);
-    }
-  }
 
   function updateRefinedSelection() {
     const sel = typeof window !== "undefined" ? window.getSelection() : null;
@@ -590,7 +317,7 @@ export default function Home() {
   function handleSaveAllFavoritesToLibrary() {
     favorites.forEach((item) => saveToLibrary(item.dua, item.nameOfAllah));
     setLibrary(getLibrary());
-    setFavorites([]);
+    clearFavorites();
     setFavoritesState([]);
   }
 
@@ -1028,7 +755,7 @@ export default function Home() {
                   size="sm"
                   onClick={() => {
                     setSourcesPopupOpen(false);
-                    void handleRefine();
+                    void handleRefine(query, refinedDua, searchResult);
                   }}
                   disabled={isRefining}
                 >
@@ -1341,7 +1068,7 @@ export default function Home() {
               placeholder=" "
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              onKeyDown={(e) => e.key === "Enter" && runSearch()}
               className="w-full bg-transparent text-slate-800 dark:text-slate-200 text-sm sm:text-base font-calligraphy outline-none placeholder:text-slate-500 dark:placeholder:text-slate-400 py-1"
             />
             {!query && (
@@ -1384,7 +1111,7 @@ export default function Home() {
             </button>
             <button
               type="button"
-              onClick={() => void handleSearch()}
+              onClick={() => void runSearch()}
               disabled={isSearching}
               className="hidden sm:inline-flex shrink-0 p-1.5 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20 rounded-md transition-colors disabled:opacity-50"
               aria-label="Search"
@@ -1489,7 +1216,7 @@ export default function Home() {
                 className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                 variant="outline"
                 size="sm"
-                onClick={() => void handleRefine()}
+                onClick={() => void handleRefine(query, refinedDua, searchResult)}
                 disabled={isRefining}
               >
                 {isRefining ? "Refining…" : "Refine into du'a"}
