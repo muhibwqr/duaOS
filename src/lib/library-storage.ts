@@ -3,10 +3,13 @@
  * Uses localStorage; no auth in MVP.
  */
 
-import type { LibraryEntry, FavoriteItem } from "@/types/dua";
+import type { LibraryEntry, FavoriteItem, DuaRequest } from "@/types/dua";
+import { extractShareCode, decodeSharePayload } from "@/lib/share-codec";
 
 export const LIBRARY_KEY = "duaos-library";
 export const FAVORITES_KEY = "duaos-favorites";
+export const REQUESTS_KEY = "duaos-requests";
+export const DISPLAY_NAME_KEY = "duaos-display-name";
 export const MAX_FAVORITES_ITEMS = 50;
 export const DUAOS_EXPORT_VERSION = 1;
 
@@ -133,6 +136,76 @@ export function parseDuaOSImport(raw: string): LibraryEntry[] | null {
   }
   flush();
   return entries.length > 0 ? entries : null;
+}
+
+export function getRequests(): DuaRequest[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(REQUESTS_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list.filter((r) => r && typeof r.id === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function setRequests(list: DuaRequest[]): DuaRequest[] {
+  try {
+    if (typeof window !== "undefined") localStorage.setItem(REQUESTS_KEY, JSON.stringify(list));
+  } catch (e) {
+    console.error("Set requests failed", e);
+  }
+  return list;
+}
+
+export function upsertRequest(r: DuaRequest): DuaRequest[] {
+  const list = getRequests().filter((e) => e.id !== r.id);
+  list.push(r);
+  return setRequests(list);
+}
+
+export function removeRequest(id: string): DuaRequest[] {
+  return setRequests(getRequests().filter((e) => e.id !== id));
+}
+
+export function markRequestMade(id: string): DuaRequest[] {
+  return setRequests(
+    getRequests().map((e) => (e.id === id ? { ...e, madeAt: new Date().toISOString() } : e))
+  );
+}
+
+export type ParsedImport =
+  | { type: "entries"; entries: LibraryEntry[] }
+  | { type: "request"; request: DuaRequest };
+
+/**
+ * Async variant of parseDuaOSImport that also accepts share links/codes.
+ * Returns entries for dua/list payloads, a request for request payloads, null otherwise.
+ */
+export async function parseDuaOSImportAsync(raw: string): Promise<ParsedImport | null> {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const code = extractShareCode(trimmed);
+  if (code) {
+    const payload = await decodeSharePayload(code);
+    if (!payload) return null;
+    if (payload.kind === "dua") {
+      return {
+        type: "entries",
+        entries: [{ dua: payload.item.dua.trim(), name: payload.item.name?.trim() || undefined, at: payload.item.at || new Date().toISOString() }],
+      };
+    }
+    if (payload.kind === "list") {
+      const now = new Date().toISOString();
+      return {
+        type: "entries",
+        entries: payload.items.map((i) => ({ dua: i.dua.trim(), name: i.name?.trim() || undefined, at: i.at || now })),
+      };
+    }
+    return { type: "request", request: { ...payload.request, direction: "received" } };
+  }
+  const entries = parseDuaOSImport(trimmed);
+  return entries && entries.length > 0 ? { type: "entries", entries } : null;
 }
 
 export function mergeIntoLibrary(entries: LibraryEntry[]): void {

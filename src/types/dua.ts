@@ -21,3 +21,14 @@ export type FavoriteItem = {
   hadithSnippet?: string;
   addedAt: string;
 };
+
+export type DuaRequest = {
+  id: string;
+  text: string;
+  name?: string;
+  from?: string;
+  at: string;
+  direction: "sent" | "received";
+  code?: string;
+  madeAt?: string;
+};
