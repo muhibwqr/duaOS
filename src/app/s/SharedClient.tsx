@@ -14,6 +14,8 @@ import {
   markRequestMade,
   getRequests,
   upsertList,
+  applyState,
+  parseDuaOSImportAsync,
 } from "@/lib/library-storage";
 
 type DecodeState = "loading" | "invalid" | "ready";
@@ -25,10 +27,13 @@ export default function SharedClient() {
   const [pasteInput, setPasteInput] = useState("");
   const [feedback, setFeedback] = useState<Record<string, boolean>>({});
   const [madeRequest, setMadeRequest] = useState(false);
+  const [currentCode, setCurrentCode] = useState("");
+  const [restored, setRestored] = useState<{ duas: number; lists: number } | null>(null);
 
   const decode = useCallback(async (raw: string) => {
     const p = await decodeSharePayload(raw);
     if (p) {
+      setCurrentCode(raw);
       setPayload(p);
       setState("ready");
       if (p.kind === "request") {
@@ -54,6 +59,7 @@ export default function SharedClient() {
       setState("loading");
       setPayload(null);
       setMadeRequest(false);
+      setRestored(null);
       setFeedback({});
       void decode(readCode());
     };
@@ -196,6 +202,30 @@ export default function SharedClient() {
                 </DuaCard>
               ))}
             </div>
+          </section>
+        )}
+
+        {state === "ready" && payload?.kind === "state" && (
+          <section className="rounded-2xl border border-slate-200/60 dark:border-slate-500/30 bg-white/90 dark:bg-slate-800/50 backdrop-blur-xl p-6 sm:p-8 shadow-[0_2px_24px_rgba(0,0,0,0.06)]">
+            <h1 className="font-serif text-xl sm:text-2xl font-medium text-slate-800 dark:text-slate-100 mb-2">
+              du&apos;aOS state code
+            </h1>
+            <p className="font-github text-sm text-slate-500 dark:text-slate-400 mb-4">
+              {payload.library.length + payload.favorites.length} du&apos;as · {payload.lists.length} list
+              {payload.lists.length === 1 ? "" : "s"} · {payload.requests.length} request
+              {payload.requests.length === 1 ? "" : "s"}. Restoring merges into this browser without duplicating.
+            </p>
+            <Button
+              className="font-github bg-emerald-600 hover:bg-emerald-500 text-white border-0"
+              disabled={restored !== null}
+              onClick={() => {
+                void parseDuaOSImportAsync(currentCode).then((parsed) => {
+                  if (parsed?.type === "state") setRestored(applyState(parsed));
+                });
+              }}
+            >
+              {restored ? `Restored ${restored.duas} du'as, ${restored.lists} lists` : "Restore here"}
+            </Button>
           </section>
         )}
 
