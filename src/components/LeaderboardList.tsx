@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { getLibrary, getFavorites, getRequests } from "@/lib/library-storage";
 
 type LeaderboardEntry = { name: string; total: number };
@@ -29,8 +29,9 @@ export function LeaderboardList() {
       .catch(() => setError(true));
   }, []);
 
-  const stats = useMemo(() => {
-    if (typeof window === "undefined") return null;
+  const [stats, setStats] = useState<{ saved: number; top: [string, number][]; fulfilled: number } | null>(null);
+
+  useEffect(() => {
     const library = getLibrary();
     const favorites = getFavorites();
     const nameCounts = new Map<string, number>();
@@ -42,7 +43,8 @@ export function LeaderboardList() {
     }
     const top = [...nameCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
     const fulfilled = getRequests().filter((r) => r.madeAt).length;
-    return { saved: library.length + favorites.length, top, fulfilled };
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage is only readable after mount
+    setStats({ saved: library.length + favorites.length, top, fulfilled });
   }, []);
 
   const max = entries && entries.length > 0 ? Math.max(...entries.map((e) => e.total)) : 0;
