@@ -73,6 +73,13 @@ describe("extractShareCode", () => {
     expect(extractShareCode("https://duaos.com/s#z.abcDEF_-123")).toBe("z.abcDEF_-123");
     expect(extractShareCode("https://duaos.com/s/#z.abcDEF_-123")).toBe("z.abcDEF_-123");
   });
+  it("extracts from ?c= search param on any path", () => {
+    expect(extractShareCode("https://duaos.com/s?c=z.abcDEF_-123")).toBe("z.abcDEF_-123");
+    expect(extractShareCode("https://duaos.com/s?c=j.aGVsbG8&x=1")).toBe("j.aGVsbG8");
+  });
+  it("prefers ?c= over hash", () => {
+    expect(extractShareCode("https://duaos.com/s?c=j.AAA#z.BBB")).toBe("j.AAA");
+  });
   it("extracts bare code", () => {
     expect(extractShareCode("j.abcDEF_-123")).toBe("j.abcDEF_-123");
   });
@@ -84,7 +91,35 @@ describe("extractShareCode", () => {
 });
 
 describe("buildShareUrl", () => {
-  it("builds url with explicit origin", () => {
-    expect(buildShareUrl("z.abc", "https://duaos.com")).toBe("https://duaos.com/s#z.abc");
+  it("builds url with explicit origin (hash mode default)", () => {
+    expect(buildShareUrl("z.abc", { origin: "https://duaos.com" })).toBe("https://duaos.com/s#z.abc");
+    expect(buildShareUrl("z.abc", { origin: "https://duaos.com", mode: "hash" })).toBe("https://duaos.com/s#z.abc");
+  });
+  it("builds query-mode url", () => {
+    expect(buildShareUrl("z.abc", { origin: "https://duaos.com", mode: "query" })).toBe("https://duaos.com/s?c=z.abc");
+  });
+});
+
+describe("state payload", () => {
+  it("roundtrips kind=state", async () => {
+    const payload: SharePayload = {
+      v: 1,
+      kind: "state",
+      library: [{ dua: "lib dua", name: "Al-Wakeel (The Trustee) - الوكيل" }],
+      favorites: [{ dua: "fav dua" }],
+      lists: [{ id: "l1", title: "Morning", items: [{ dua: "m1" }], at: "2026-01-01T00:00:00.000Z" }],
+      requests: [{ id: "r1", text: "pray for me", at: "2026-01-01T00:00:00.000Z" }],
+    };
+    expect(await decodeSharePayload(await encodeSharePayload(payload))).toEqual(payload);
+  });
+
+  it("roundtrips list with id", async () => {
+    const payload: SharePayload = { v: 1, kind: "list", id: "l9", title: "T", items: [{ dua: "x" }] };
+    expect(await decodeSharePayload(await encodeSharePayload(payload))).toEqual(payload);
+  });
+
+  it("rejects malformed state", async () => {
+    const bad = `j.${btoa(JSON.stringify({ v: 1, kind: "state", library: [], favorites: [], lists: [{ title: "no id", items: [] }], requests: [] })).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")}`;
+    expect(await decodeSharePayload(bad)).toBeNull();
   });
 });

@@ -11,10 +11,20 @@ export const SHARE_VERSION = 1;
 export type SharedDua = { dua: string; name?: string; sources?: string[]; at?: string };
 export type SharedRequest = { id: string; text: string; name?: string; from?: string; at: string };
 
+export type SharedList = { id: string; title: string; items: SharedDua[]; at?: string };
+
 export type SharePayload =
   | { v: 1; kind: "dua"; item: SharedDua }
-  | { v: 1; kind: "list"; title?: string; items: SharedDua[] }
-  | { v: 1; kind: "request"; request: SharedRequest };
+  | { v: 1; kind: "list"; id?: string; title?: string; items: SharedDua[] }
+  | { v: 1; kind: "request"; request: SharedRequest }
+  | {
+      v: 1;
+      kind: "state";
+      library: SharedDua[];
+      favorites: SharedDua[];
+      lists: SharedList[];
+      requests: SharedRequest[];
+    };
 
 function bytesToBase64Url(bytes: Uint8Array): string {
   let bin = "";
@@ -55,6 +65,15 @@ function isSharedDua(d: unknown): d is SharedDua {
   return true;
 }
 
+function isSharedList(l: unknown): l is SharedList {
+  if (typeof l !== "object" || l === null) return false;
+  const o = l as Record<string, unknown>;
+  if (typeof o.id !== "string" || !o.id) return false;
+  if (typeof o.title !== "string") return false;
+  if (o.at !== undefined && typeof o.at !== "string") return false;
+  return Array.isArray(o.items) && o.items.every(isSharedDua);
+}
+
 function isSharedRequest(r: unknown): r is SharedRequest {
   if (typeof r !== "object" || r === null) return false;
   const o = r as Record<string, unknown>;
@@ -73,21 +92,34 @@ function isSharePayload(p: unknown): p is SharePayload {
   if (o.kind === "dua") return isSharedDua(o.item);
   if (o.kind === "list") {
     if (o.title !== undefined && typeof o.title !== "string") return false;
+    if (o.id !== undefined && typeof o.id !== "string") return false;
     return Array.isArray(o.items) && o.items.length > 0 && o.items.every(isSharedDua);
   }
   if (o.kind === "request") return isSharedRequest(o.request);
+  if (o.kind === "state") {
+    return (
+      Array.isArray(o.library) && o.library.every(isSharedDua) &&
+      Array.isArray(o.favorites) && o.favorites.every(isSharedDua) &&
+      Array.isArray(o.lists) && o.lists.every(isSharedList) &&
+      Array.isArray(o.requests) && o.requests.every(isSharedRequest)
+    );
+  }
   return false;
 }
 
-/** Extract the share code from a full URL (hash after /s#) or a bare z./j. code. */
+const CODE_RE = /^[zj]\.[A-Za-z0-9_-]+$/;
+
+/** Extract the share code from a full URL (?c= param or hash after /s#) or a bare z./j. code. */
 export function extractShareCode(input: string): string | null {
   const trimmed = input.trim();
   if (!trimmed) return null;
-  if (/^[zj]\.[A-Za-z0-9_-]+$/.test(trimmed)) return trimmed;
+  if (CODE_RE.test(trimmed)) return trimmed;
   try {
     const url = new URL(trimmed);
+    const c = url.searchParams.get("c");
+    if (c && CODE_RE.test(c)) return c;
     const hash = url.hash.startsWith("#") ? url.hash.slice(1) : url.hash;
-    if (url.pathname.replace(/\/+$/, "").endsWith("/s") && /^[zj]\.[A-Za-z0-9_-]+$/.test(hash)) {
+    if (url.pathname.replace(/\/+$/, "").endsWith("/s") && CODE_RE.test(hash)) {
       return hash;
     }
   } catch {
@@ -96,9 +128,9 @@ export function extractShareCode(input: string): string | null {
   return null;
 }
 
-export function buildShareUrl(code: string, origin?: string): string {
-  const base = origin ?? (typeof window !== "undefined" ? window.location.origin : "");
-  return `${base}/s#${code}`;
+export function buildShareUrl(code: string, opts?: { origin?: string; mode?: "hash" | "query" }): string {
+  const base = opts?.origin ?? (typeof window !== "undefined" ? window.location.origin : "");
+  return opts?.mode === "query" ? `${base}/s?c=${code}` : `${base}/s#${code}`;
 }
 
 export async function encodeSharePayload(p: SharePayload): Promise<string> {

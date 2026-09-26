@@ -2,19 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { getLibrary, getFavorites, getRequests } from "@/lib/library-storage";
+import { parseNameContent } from "@/lib/share-preview";
 
 type LeaderboardEntry = { name: string; total: number };
-
-/** Split "English (Meaning) - العربية" content format into display parts. */
-function parseNameContent(content: string): { english: string; meaning: string; arabic: string } {
-  const dashIdx = content.lastIndexOf(" - ");
-  const arabic = dashIdx >= 0 ? content.slice(dashIdx + 3).trim() : "";
-  const head = dashIdx >= 0 ? content.slice(0, dashIdx) : content;
-  const parenIdx = head.indexOf(" (");
-  const english = (parenIdx >= 0 ? head.slice(0, parenIdx) : head).trim();
-  const meaning = parenIdx >= 0 ? head.slice(parenIdx + 2, head.endsWith(")") ? -1 : undefined).trim() : "";
-  return { english, meaning, arabic };
-}
 
 export function LeaderboardList() {
   const [entries, setEntries] = useState<LeaderboardEntry[] | null>(null);

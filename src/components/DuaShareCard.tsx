@@ -5,20 +5,13 @@
  * hadith sources, duaos.com bottom right. Captured via html-to-image.
  */
 
+import { parseNameContent } from "@/lib/share-preview";
+
 type DuaShareCardProps = {
   personalDua: string;
   nameOfAllah?: string;
   hadithSources: string[];
 };
-
-/** Split "English (Meaning) - العربية" into parts for display. */
-function parseNameContent(content: string): { english: string; arabic: string } {
-  const dashIdx = content.lastIndexOf(" - ");
-  const arabic = dashIdx >= 0 ? content.slice(dashIdx + 3).trim() : "";
-  const head = dashIdx >= 0 ? content.slice(0, dashIdx) : content;
-  const english = head.trim();
-  return { english, arabic };
-}
 
 function duaFontSize(text: string): number {
   if (text.length > 600) return 26;
