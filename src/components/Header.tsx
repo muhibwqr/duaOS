@@ -43,9 +43,12 @@ export function Header({ favoritesCount = 0, onCartClick }: HeaderProps) {
               Du'aOS
             </Link>
             {totalDuasCount != null && (
-              <span className="hidden sm:inline font-github text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">
+              <Link
+                href="/leaderboard"
+                className="hidden sm:inline font-github text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 whitespace-nowrap transition-colors"
+              >
                 {totalDuasCount.toLocaleString()} du&apos;as made using du&apos;aOS
-              </span>
+              </Link>
             )}
           </div>
           <nav className="hidden sm:flex items-center gap-8 font-github text-sm text-slate-600 dark:text-slate-400 shrink-0">
@@ -54,6 +57,9 @@ export function Header({ favoritesCount = 0, onCartClick }: HeaderProps) {
             </Link>
             <Link href="/how" className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">
               how it works
+            </Link>
+            <Link href="/leaderboard" className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">
+              leaderboard
             </Link>
           </nav>
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
