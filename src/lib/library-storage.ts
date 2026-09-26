@@ -3,12 +3,13 @@
  * Uses localStorage; no auth in MVP.
  */
 
-import type { LibraryEntry, FavoriteItem, DuaRequest } from "@/types/dua";
-import { extractShareCode, decodeSharePayload } from "@/lib/share-codec";
+import type { LibraryEntry, FavoriteItem, DuaRequest, DuaList } from "@/types/dua";
+import { extractShareCode, decodeSharePayload, type SharePayload } from "@/lib/share-codec";
 
 export const LIBRARY_KEY = "duaos-library";
 export const FAVORITES_KEY = "duaos-favorites";
 export const REQUESTS_KEY = "duaos-requests";
+export const LISTS_KEY = "duaos-lists";
 export const DISPLAY_NAME_KEY = "duaos-display-name";
 export const MAX_FAVORITES_ITEMS = 50;
 export const DUAOS_EXPORT_VERSION = 1;
@@ -174,9 +175,65 @@ export function markRequestMade(id: string): DuaRequest[] {
   );
 }
 
+/** Normalize du'a text for dedupe: trim, collapse whitespace, lowercase. */
+function normalizeDuaText(s: string): string {
+  return s.replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+export function getLists(): DuaList[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(LISTS_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list.filter((l) => l && typeof l.id === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function setLists(list: DuaList[]): DuaList[] {
+  try {
+    if (typeof window !== "undefined") localStorage.setItem(LISTS_KEY, JSON.stringify(list));
+  } catch (e) {
+    console.error("Set lists failed", e);
+  }
+  return list;
+}
+
+export function upsertList(l: DuaList): DuaList[] {
+  const list = getLists().filter((e) => e.id !== l.id);
+  list.push(l);
+  return setLists(list);
+}
+
+export function removeList(id: string): DuaList[] {
+  return setLists(getLists().filter((e) => e.id !== id));
+}
+
+/** Add an entry to a list, deduped by normalized du'a text. Returns updated lists. */
+export function addToList(id: string, entry: LibraryEntry): DuaList[] {
+  const lists = getLists();
+  const target = lists.find((l) => l.id === id);
+  if (!target) return lists;
+  const key = normalizeDuaText(entry.dua);
+  if (!target.items.some((i) => normalizeDuaText(i.dua) === key)) {
+    target.items = [...target.items, { dua: entry.dua, name: entry.name, at: entry.at || new Date().toISOString() }];
+    setLists(lists);
+  }
+  return lists;
+}
+
 export type ParsedImport =
   | { type: "entries"; entries: LibraryEntry[] }
-  | { type: "request"; request: DuaRequest };
+  | { type: "list"; list: DuaList }
+  | { type: "request"; request: DuaRequest }
+  | {
+      type: "state";
+      library: LibraryEntry[];
+      favorites: { dua: string; nameOfAllah?: string }[];
+      lists: DuaList[];
+      requests: DuaRequest[];
+    };
 
 /**
  * Async variant of parseDuaOSImport that also accepts share links/codes.
@@ -189,17 +246,42 @@ export async function parseDuaOSImportAsync(raw: string): Promise<ParsedImport |
   if (code) {
     const payload = await decodeSharePayload(code);
     if (!payload) return null;
+    const now = new Date().toISOString();
     if (payload.kind === "dua") {
       return {
         type: "entries",
-        entries: [{ dua: payload.item.dua.trim(), name: payload.item.name?.trim() || undefined, at: payload.item.at || new Date().toISOString() }],
+        entries: [{ dua: payload.item.dua.trim(), name: payload.item.name?.trim() || undefined, at: payload.item.at || now }],
       };
     }
     if (payload.kind === "list") {
-      const now = new Date().toISOString();
+      if (payload.id) {
+        return {
+          type: "list",
+          list: {
+            id: payload.id,
+            title: payload.title?.trim() || "Shared list",
+            items: payload.items.map((i) => ({ dua: i.dua.trim(), name: i.name?.trim() || undefined, at: i.at || now })),
+            at: now,
+          },
+        };
+      }
       return {
         type: "entries",
         entries: payload.items.map((i) => ({ dua: i.dua.trim(), name: i.name?.trim() || undefined, at: i.at || now })),
+      };
+    }
+    if (payload.kind === "state") {
+      return {
+        type: "state",
+        library: payload.library.map((i) => ({ dua: i.dua.trim(), name: i.name?.trim() || undefined, at: i.at || now })),
+        favorites: payload.favorites.map((i) => ({ dua: i.dua.trim(), nameOfAllah: i.name?.trim() || undefined })),
+        lists: payload.lists.map((l) => ({
+          id: l.id,
+          title: l.title,
+          items: l.items.map((i) => ({ dua: i.dua.trim(), name: i.name?.trim() || undefined, at: i.at || now })),
+          at: l.at || now,
+        })),
+        requests: payload.requests.map((r) => ({ ...r, direction: "received" as const })),
       };
     }
     return { type: "request", request: { ...payload.request, direction: "received" } };
@@ -208,13 +290,81 @@ export async function parseDuaOSImportAsync(raw: string): Promise<ParsedImport |
   return entries && entries.length > 0 ? { type: "entries", entries } : null;
 }
 
-export function mergeIntoLibrary(entries: LibraryEntry[]): void {
-  if (typeof window === "undefined" || entries.length === 0) return;
-  const raw = localStorage.getItem(LIBRARY_KEY);
-  const list: LibraryEntry[] = raw ? JSON.parse(raw) : [];
+/** Merge a state payload's library entries, deduped by normalized text. */
+export function mergeLibraryDeduped(entries: LibraryEntry[]): number {
+  if (typeof window === "undefined" || entries.length === 0) return 0;
+  const list = getLibrary();
+  const seen = new Set(list.map((e) => normalizeDuaText(e.dua)));
   const now = new Date().toISOString();
+  let added = 0;
   for (const e of entries) {
+    const key = normalizeDuaText(e.dua);
+    if (seen.has(key)) continue;
+    seen.add(key);
     list.push({ dua: e.dua, name: e.name, at: e.at || now });
+    added++;
   }
   localStorage.setItem(LIBRARY_KEY, JSON.stringify(list));
+  return added;
+}
+
+/** Merge favorites deduped by normalized du'a text. Returns count added. */
+export function mergeFavoritesDeduped(items: { dua: string; nameOfAllah?: string }[]): number {
+  const existing = getFavorites();
+  const seen = new Set(existing.map((f) => normalizeDuaText(f.dua)));
+  let added = 0;
+  for (const i of items) {
+    const key = normalizeDuaText(i.dua);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    addToFavorites({ dua: i.dua, nameOfAllah: i.nameOfAllah });
+    added++;
+  }
+  return added;
+}
+
+/** Apply a decoded state import: merge library/favorites/lists/requests without duplicating. */
+export function applyState(state: Extract<ParsedImport, { type: "state" }>): { duas: number; lists: number } {
+  const duas = mergeLibraryDeduped(state.library) + mergeFavoritesDeduped(state.favorites);
+  const existingLists = getLists();
+  let listsAdded = 0;
+  const seenIds = new Set(existingLists.map((l) => l.id));
+  for (const l of state.lists) {
+    upsertList(l);
+    if (!seenIds.has(l.id)) listsAdded++;
+  }
+  for (const r of state.requests) {
+    const existing = getRequests().find((e) => e.id === r.id);
+    upsertRequest({ ...r, madeAt: existing?.madeAt ?? r.madeAt });
+  }
+  return { duas, lists: listsAdded };
+}
+
+/** Build a state payload snapshot of current local storage. */
+export function buildStatePayload(): SharePayload {
+  const now = new Date().toISOString();
+  return {
+    v: 1,
+    kind: "state",
+    library: getLibrary().map((e) => ({ dua: e.dua, name: e.name, at: e.at })),
+    favorites: getFavorites().map((f) => ({ dua: f.dua, name: f.nameOfAllah, at: f.addedAt })),
+    lists: getLists().map((l) => ({
+      id: l.id,
+      title: l.title,
+      items: l.items.map((i) => ({ dua: i.dua, name: i.name, at: i.at || now })),
+      at: l.at,
+    })),
+    requests: getRequests().map((r) => ({
+      id: r.id,
+      text: r.text,
+      name: r.name,
+      from: r.from,
+      at: r.at,
+    })),
+  };
+}
+
+/** Merge entries into the library, deduped by normalized text. Returns count actually added. */
+export function mergeIntoLibrary(entries: LibraryEntry[]): number {
+  return mergeLibraryDeduped(entries);
 }

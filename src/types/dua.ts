@@ -22,6 +22,8 @@ export type FavoriteItem = {
   addedAt: string;
 };
 
+export type DuaList = { id: string; title: string; items: LibraryEntry[]; at: string };
+
 export type DuaRequest = {
   id: string;
   text: string;
