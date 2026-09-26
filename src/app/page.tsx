@@ -22,13 +22,24 @@ import {
   clearFavorites,
   mergeIntoLibrary,
   exportLibraryAsDuaOSJson,
-  parseDuaOSImport,
-  LIBRARY_KEY,
-  FAVORITES_KEY,
-  MAX_FAVORITES_ITEMS,
-  DUAOS_EXPORT_VERSION,
+  parseDuaOSImportAsync,
+  getRequests,
+  upsertRequest,
+  removeRequest,
+  markRequestMade,
+  DISPLAY_NAME_KEY,
 } from "@/lib/library-storage";
-import type { Intent, SearchResult, SearchResultItem, LibraryEntry, FavoriteItem } from "@/types/dua";
+import {
+  encodeSharePayload,
+  buildShareUrl,
+  type SharePayload,
+  type SharedRequest,
+} from "@/lib/share-codec";
+import { localMatch } from "@/lib/local-match";
+import namesOfAllah from "@/data/names-of-allah.json";
+import type { Intent, SearchResult, SearchResultItem, LibraryEntry, FavoriteItem, DuaRequest } from "@/types/dua";
+
+const namesList = namesOfAllah as { arabic: string; english: string; meaning: string; tags: string[] }[];
 
 /** Strip markdown to plain text for share card image (reliable PNG capture). */
 function stripMarkdownForShare(text: string): string {
@@ -136,6 +147,16 @@ export default function Home() {
   const [exportToNotesFeedback, setExportToNotesFeedback] = useState<string | null>(null);
   const [shareForDuaOSFeedback, setShareForDuaOSFeedback] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [listShareModalOpen, setListShareModalOpen] = useState(false);
+  const [shareModalFeedback, setShareModalFeedback] = useState<string | null>(null);
+  const [requests, setRequests] = useState<DuaRequest[]>([]);
+  const [requestModalOpen, setRequestModalOpen] = useState(false);
+  const [requestText, setRequestText] = useState("");
+  const [requestCreating, setRequestCreating] = useState(false);
+  const [createdRequestCode, setCreatedRequestCode] = useState<string | null>(null);
+  const [createdRequestLink, setCreatedRequestLink] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState("");
+  const [requestFeedback, setRequestFeedback] = useState<string | null>(null);
 
   useEffect(() => {
     setLibrary(getLibrary());
@@ -145,6 +166,26 @@ export default function Home() {
 
   useEffect(() => {
     setFavoritesState(getFavorites());
+    setRequests(getRequests());
+    try {
+      setDisplayName(localStorage.getItem(DISPLAY_NAME_KEY) ?? "");
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // Deep-link support: /?q=...&run=1 prefills the query and optionally runs the search.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get("q");
+    const run = params.get("run");
+    if (q) {
+      const trimmed = q.slice(0, 500);
+      setQuery(trimmed);
+      if (run === "1") void handleSearch(trimmed, "problem", edition);
+    }
+    if (q || run) window.history.replaceState(null, "", window.location.pathname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -336,33 +377,6 @@ export default function Home() {
     return lines.join("\n").trim();
   }
 
-  async function handleShareDuaList() {
-    const text = getShareableDuaListText();
-    if (!text) return;
-    setListShareFeedback(null);
-    try {
-      if (typeof navigator !== "undefined" && navigator.share) {
-        await navigator.share({
-          title: "My du'a list",
-          text,
-        });
-        setListShareFeedback("shared");
-      } else {
-        await navigator.clipboard.writeText(text);
-        setListShareFeedback("copied");
-      }
-      setTimeout(() => setListShareFeedback(null), 2000);
-    } catch {
-      try {
-        await navigator.clipboard.writeText(text);
-        setListShareFeedback("copied");
-        setTimeout(() => setListShareFeedback(null), 2000);
-      } catch {
-        setListShareFeedback(null);
-      }
-    }
-  }
-
   async function handleExportToNotes() {
     const text = getShareableDuaListText();
     if (!text) return;
@@ -392,49 +406,138 @@ export default function Home() {
     setTimeout(() => setExportToNotesFeedback(null), 3000);
   }
 
-  function handleShareForDuaOS() {
+  function handleDownloadLibraryJson() {
     const json = exportLibraryAsDuaOSJson(library, favorites);
     if (!json) return;
-    setShareForDuaOSFeedback(null);
     const blob = new Blob([json], { type: "application/json" });
-    const file = new File([blob], "duaos-library.json", { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "duaos-library.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+    setShareForDuaOSFeedback("Downloaded");
+    setTimeout(() => setShareForDuaOSFeedback(null), 3000);
+  }
+
+  async function buildListShareLink(): Promise<{ url: string; code: string } | null> {
+    const items = [
+      ...[...favorites].reverse().map((f) => ({ dua: f.dua, name: f.nameOfAllah, at: f.addedAt })),
+      ...[...library].reverse().map((e) => ({ dua: e.dua, name: e.name, at: e.at })),
+    ];
+    if (items.length === 0) return null;
+    const payload: SharePayload = { v: 1, kind: "list", title: "My du'a list", items };
+    const code = await encodeSharePayload(payload);
+    return { url: buildShareUrl(code), code };
+  }
+
+  async function handleListCopyLink() {
+    const link = await buildListShareLink();
+    if (!link) return;
+    await navigator.clipboard.writeText(link.url);
+    setListShareFeedback("copied");
+    setTimeout(() => setListShareFeedback(null), 2000);
+  }
+
+  async function handleListCopyCode() {
+    const link = await buildListShareLink();
+    if (!link) return;
+    await navigator.clipboard.writeText(link.code);
+    setListShareFeedback("copied");
+    setTimeout(() => setListShareFeedback(null), 2000);
+  }
+
+  async function handleListNativeShare() {
+    const link = await buildListShareLink();
+    if (!link) return;
     try {
-      if (typeof navigator !== "undefined" && navigator.share && navigator.canShare?.({ files: [file] })) {
-        navigator.share({ files: [file], title: "DuaOS library", text: "Send to another DuaOS user to import into their library." }).then(() => {
-          setShareForDuaOSFeedback("Shared");
-        }).catch(() => {
-          navigator.clipboard.writeText(json).then(() => setShareForDuaOSFeedback("Copied"));
-        });
-      } else {
-        navigator.clipboard.writeText(json).then(() => setShareForDuaOSFeedback("Copied — send to another user to import"));
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share({ title: "My du'a list", text: "My du'a list — du'aOS", url: link.url });
+        setListShareFeedback("shared");
+        setTimeout(() => setListShareFeedback(null), 2000);
+        return;
       }
     } catch {
-      navigator.clipboard.writeText(json).then(() => setShareForDuaOSFeedback("Copied — send to another user to import"));
+      // fall through to copy
     }
-    setTimeout(() => setShareForDuaOSFeedback(null), 4000);
+    await navigator.clipboard.writeText(link.url);
+    setListShareFeedback("copied");
+    setTimeout(() => setListShareFeedback(null), 2000);
   }
 
-  function handleCopyForDuaOS() {
-    const one = { dua: refinedDua.trim(), name: searchResult?.name?.content, at: new Date().toISOString() };
-    const json = JSON.stringify({ duaos: "library", version: DUAOS_EXPORT_VERSION, entries: [one] });
-    navigator.clipboard.writeText(json).then(() => {
-      setCopyFeedbackId("duaos-copy");
-      setTimeout(() => setCopyFeedbackId(null), 2000);
-    });
+  async function handleCreateRequest() {
+    const text = requestText.trim().slice(0, 500);
+    if (!text || requestCreating) return;
+    setRequestCreating(true);
+    try {
+      const trimmedName = displayName.trim().slice(0, 80);
+      try {
+        localStorage.setItem(DISPLAY_NAME_KEY, trimmedName);
+      } catch {
+        // ignore
+      }
+      let name: string | undefined;
+      try {
+        const ctrl = new AbortController();
+        const timeout = setTimeout(() => ctrl.abort(), 4000);
+        const res = await fetch("/api/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: text }),
+          signal: ctrl.signal,
+        });
+        clearTimeout(timeout);
+        if (res.ok) {
+          const data = (await res.json()) as { name?: { content?: unknown } };
+          if (typeof data.name?.content === "string") name = data.name.content;
+        }
+      } catch {
+        // offline or slow — fall back to local match
+      }
+      if (!name) name = localMatch(text, namesList)?.name.content;
+      const request: SharedRequest = {
+        id: crypto.randomUUID(),
+        text,
+        name,
+        from: trimmedName || undefined,
+        at: new Date().toISOString(),
+      };
+      const code = await encodeSharePayload({ v: 1, kind: "request", request });
+      upsertRequest({ ...request, direction: "sent", code });
+      setRequests(getRequests());
+      setCreatedRequestCode(code);
+      setCreatedRequestLink(buildShareUrl(code));
+    } finally {
+      setRequestCreating(false);
+    }
   }
 
-  function handleImportConfirm() {
+  async function handleImportConfirm() {
     setImportError(null);
     setImportSuccess(null);
     const raw = importInput.trim();
-    const entries = parseDuaOSImport(raw);
-    if (!entries || entries.length === 0) {
-      setImportError("No valid du'as found. Paste DuaOS JSON or the shared text list.");
+    const parsed = await parseDuaOSImportAsync(raw);
+    if (!parsed) {
+      setImportError("No valid du'as found. Paste a du'aOS link, code, JSON, or text list.");
       return;
     }
-    mergeIntoLibrary(entries);
+    if (parsed.type === "request") {
+      upsertRequest(parsed.request);
+      setRequests(getRequests());
+      setImportInput("");
+      setImportSuccess("Request added");
+      setTimeout(() => {
+        setImportSuccess(null);
+        setImportModalOpen(false);
+      }, 1500);
+      return;
+    }
+    if (parsed.entries.length === 0) {
+      setImportError("No valid du'as found. Paste a du'aOS link, code, JSON, or text list.");
+      return;
+    }
+    mergeIntoLibrary(parsed.entries);
     setLibrary(getLibrary());
-    setImportSuccess(`Imported ${entries.length} du'a${entries.length === 1 ? "" : "s"}`);
+    setImportSuccess(`Imported ${parsed.entries.length} du'a${parsed.entries.length === 1 ? "" : "s"}`);
     setImportInput("");
     setTimeout(() => {
       setImportSuccess(null);
@@ -490,17 +593,75 @@ export default function Home() {
     }
   }
 
-  async function handleShareContinueToOptions() {
+  function handleShareContinueToOptions() {
     setShareError(null);
-    await generateSharePng();
     setShareModalStep("options");
   }
 
-  function shareToTwitter() {
-    const text = refinedDua.trim();
+  function flashShareModalFeedback(key: string) {
+    setShareModalFeedback(key);
+    setTimeout(() => setShareModalFeedback(null), 2000);
+  }
+
+  async function buildDuaShareLink(): Promise<{ url: string; code: string } | null> {
+    const text = extractPersonalDua(refinedDua.trim());
+    if (!text) return null;
+    const payload: SharePayload = {
+      v: 1,
+      kind: "dua",
+      item: {
+        dua: text,
+        name: searchResult?.name?.content,
+        sources: shareHadithSources.length > 0 ? shareHadithSources : undefined,
+      },
+    };
+    const code = await encodeSharePayload(payload);
+    return { url: buildShareUrl(code), code };
+  }
+
+  async function shareCopyLink() {
+    const link = await buildDuaShareLink();
+    if (!link) return;
+    await navigator.clipboard.writeText(link.url);
+    flashShareModalFeedback("link");
+  }
+
+  async function shareCopyCode() {
+    const link = await buildDuaShareLink();
+    if (!link) return;
+    await navigator.clipboard.writeText(link.code);
+    flashShareModalFeedback("code");
+  }
+
+  function shareCopyText() {
+    const text = extractPersonalDua(refinedDua.trim());
     if (!text) return;
-    const tweetText = `${text.slice(0, 250)}${text.length > 250 ? "…" : ""} — Du'aOS`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`, "_blank", "noopener,noreferrer");
+    void navigator.clipboard.writeText(text).then(() => flashShareModalFeedback("text"));
+  }
+
+  async function shareNative() {
+    const link = await buildDuaShareLink();
+    if (!link) return;
+    const text = extractPersonalDua(refinedDua.trim());
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share({ title: "My du'a", text, url: link.url });
+        return;
+      }
+    } catch {
+      // cancelled or unsupported — fall back to copying the link
+    }
+    await navigator.clipboard.writeText(link.url);
+    flashShareModalFeedback("link");
+  }
+
+  async function shareToTwitter() {
+    const text = extractPersonalDua(refinedDua.trim());
+    if (!text) return;
+    const link = await buildDuaShareLink();
+    const tweetText = `${text.slice(0, 200)}${text.length > 200 ? "…" : ""} — Du'aOS`;
+    const url = link ? `&url=${encodeURIComponent(link.url)}` : "";
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}${url}`, "_blank", "noopener,noreferrer");
   }
 
   async function shareDownload() {
@@ -513,32 +674,6 @@ export default function Home() {
     a.href = dataUrl;
     a.download = "duaos-dua.png";
     a.click();
-  }
-
-  async function shareToMessage() {
-    const dataUrl = sharePngRef.current || (await generateSharePng());
-    if (!dataUrl) {
-      setShareError("Couldn't generate image. Try again.");
-      return;
-    }
-    try {
-      const res = await fetch(dataUrl);
-      const blob = await res.blob();
-      const file = new File([blob], "duaos-dua.png", { type: "image/png" });
-      if (typeof navigator !== "undefined" && navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: "My du'a",
-          text: "Made with Du'aOS",
-        });
-      } else {
-        await navigator.clipboard.writeText(refinedDua.trim());
-        setShareError("Copied text to clipboard (image share not supported on this device).");
-      }
-    } catch {
-      await navigator.clipboard.writeText(refinedDua.trim());
-      setShareError("Copied text to clipboard (image share not supported on this device).");
-    }
   }
 
   async function toggleVoiceInput() {
@@ -596,6 +731,14 @@ export default function Home() {
   const hadithEdition = searchResult?.hadith?.metadata?.edition;
   const hadithSourceLabel =
     typeof hadithEdition === "string" ? HADITH_EDITION_LABELS[hadithEdition] ?? hadithEdition : null;
+  const shareHadithSources = (searchResult?.hadiths ?? [])
+    .filter((h) => typeof h.metadata?.reference === "string" && (h.metadata.reference as string).trim() !== "")
+    .slice(0, 8)
+    .map((h) => {
+      const ed = typeof h.metadata?.edition === "string" ? (HADITH_EDITION_LABELS[h.metadata.edition] ?? h.metadata.edition) : "";
+      const ref = typeof h.metadata?.reference === "string" ? h.metadata.reference : "";
+      return [ed, ref].filter(Boolean).join(" — ");
+    });
 
   return (
     <div className="min-h-screen text-slate-800 dark:text-slate-200 flex flex-col">
@@ -799,17 +942,16 @@ export default function Home() {
 
             {shareModalStep === "intention" && (
               <>
-                <div className="rounded-xl border-2 border-red-500/50 bg-red-950/40 p-4 mb-6">
-                  <p className="text-sm font-github text-red-200/95 leading-relaxed">
-                    Hey, check your intentions. Make sure you&apos;re not being performative or showing off.
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/15 p-4 mb-6">
+                  <p className="text-sm font-github text-emerald-800 dark:text-emerald-200/90 leading-relaxed">
+                    A quick check of intention — share to benefit others, not to be seen.
                   </p>
                 </div>
                 <Button
                   className="w-full font-github"
-                  onClick={() => void handleShareContinueToOptions()}
-                  disabled={isSharing}
+                  onClick={handleShareContinueToOptions}
                 >
-                  {isSharing ? "Preparing…" : "I've reflected — continue"}
+                  I&apos;ve reflected — continue
                 </Button>
               </>
             )}
@@ -818,47 +960,73 @@ export default function Home() {
               <>
                 <h3 className="text-sm font-medium text-slate-700 dark:text-slate-200 font-github mb-4">Share</h3>
                 {shareError && (
-                  <p className="mb-3 text-sm text-red-200/95 font-github">{shareError}</p>
+                  <p className="mb-3 text-sm text-red-600 dark:text-red-300 font-github">{shareError}</p>
                 )}
-                <div className="flex flex-col gap-2">
-                  <div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
-                      onClick={shareToTwitter}
-                    >
-                      Twitter
-                    </Button>
-                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 font-github text-center">(text only)</p>
+                <div
+                  className="mx-auto mb-4 overflow-hidden rounded-xl border border-slate-200/60 dark:border-slate-500/30"
+                  style={{ width: 302, height: 302 }}
+                >
+                  <div style={{ transform: "scale(0.28)", transformOrigin: "top left", width: 1080, height: 1080 }}>
+                    <DuaShareCard
+                      personalDua={extractPersonalDua(refinedDua)}
+                      nameOfAllah={searchResult?.name?.content}
+                      hadithSources={shareHadithSources}
+                    />
                   </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full font-github border-slate-200/80 text-slate-700 justify-center hover:bg-slate-100"
-                    onClick={() => void shareDownload()}
+                    className="font-github border-emerald-500/40 text-emerald-700 dark:text-emerald-300 justify-center hover:bg-emerald-500/10"
+                    onClick={() => void shareCopyLink()}
                   >
-                    Instagram
+                    {shareModalFeedback === "link" ? "Link copied" : "Copy link"}
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full font-github border-slate-200/80 text-slate-700 justify-center hover:bg-slate-100"
-                    onClick={() => void shareToMessage()}
+                    className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
+                    onClick={() => void shareNative()}
                   >
-                    Message
+                    Share…
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full font-github border-slate-200/80 text-slate-700 justify-center hover:bg-slate-100"
+                    className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
                     onClick={() => void shareDownload()}
+                    disabled={isSharing}
                   >
-                    Download
+                    {isSharing ? "Generating…" : "Download image"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
+                    onClick={shareCopyText}
+                  >
+                    {shareModalFeedback === "text" ? "Copied" : "Copy text"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
+                    onClick={() => void shareToTwitter()}
+                  >
+                    X / Twitter
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
+                    onClick={() => void shareCopyCode()}
+                  >
+                    {shareModalFeedback === "code" ? "Code copied" : "Copy code"}
                   </Button>
                 </div>
                 <p className="mt-3 text-xs text-slate-500 dark:text-slate-400 font-github text-center">
-                  Instagram: download image, then post from your gallery.
+                  Links open on duaos.com, nothing is uploaded — the du&apos;a lives in the link itself.
                 </p>
               </>
             )}
@@ -891,32 +1059,14 @@ export default function Home() {
                   Import
                 </button>
                 {favorites.length + library.length > 0 && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => void handleExportToNotes()}
-                      className="text-xs font-github text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-                      aria-label="Export to Notes"
-                    >
-                      {exportToNotesFeedback || "Export to Notes"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleShareForDuaOS()}
-                      className="text-xs font-github text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-                      aria-label="Share for DuaOS import"
-                    >
-                      {shareForDuaOSFeedback || "Share for DuaOS"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void handleShareDuaList()}
-                      className="text-xs font-github text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-                      aria-label="Share my du'a list"
-                    >
-                      {listShareFeedback === "shared" ? "Shared" : listShareFeedback === "copied" ? "Copied" : "Share list"}
-                    </button>
-                  </>
+                  <button
+                    type="button"
+                    onClick={() => setListShareModalOpen(true)}
+                    className="text-xs font-github text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                    aria-label="Share my du'a list"
+                  >
+                    Share list
+                  </button>
                 )}
                 <button
                   type="button"
@@ -929,6 +1079,88 @@ export default function Home() {
               </div>
             </div>
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-8">
+              {/* Du'a requests */}
+              <section aria-label="Du'a requests">
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider font-github">Du&apos;a requests</h3>
+                  <button
+                    type="button"
+                    onClick={() => { setCreatedRequestCode(null); setCreatedRequestLink(null); setRequestText(""); setRequestModalOpen(true); }}
+                    className="text-xs font-github text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors"
+                  >
+                    + Ask for du&apos;a
+                  </button>
+                </div>
+                {requests.length === 0 ? (
+                  <p className="text-sm text-slate-500 dark:text-slate-400 font-github">
+                    Ask friends to make du&apos;a for you, or open a link someone sent you.
+                  </p>
+                ) : (
+                  <ul className="space-y-4">
+                    {[...requests].reverse().map((r) => (
+                      <li key={r.id} className="rounded-lg border border-slate-200/60 dark:border-slate-500/30 bg-slate-50/80 dark:bg-slate-800/50 p-3">
+                        <p className="whitespace-pre-wrap text-sm text-slate-800 dark:text-slate-200 font-calligraphy leading-relaxed">{r.text}</p>
+                        <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400 font-github">
+                          {r.direction === "sent" ? (
+                            <>You asked{r.name ? ` — ${r.name}` : ""} · {new Date(r.at).toLocaleDateString()}</>
+                          ) : (
+                            <>{r.from || "Someone"} asked{r.name ? ` — ${r.name}` : ""} · {new Date(r.at).toLocaleDateString()}</>
+                          )}
+                        </p>
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          {r.direction === "sent" && r.code && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void navigator.clipboard.writeText(buildShareUrl(r.code!)).then(() => {
+                                  setRequestFeedback(r.id);
+                                  setTimeout(() => setRequestFeedback(null), 2000);
+                                });
+                              }}
+                              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                            >
+                              {requestFeedback === r.id ? "Copied" : "Copy link"}
+                            </button>
+                          )}
+                          {r.direction === "received" && (
+                            <>
+                              {r.madeAt ? (
+                                <span className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-emerald-600 dark:text-emerald-400">
+                                  Made ✓
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setRequests(markRequestMade(r.id))}
+                                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20"
+                                >
+                                  I made du&apos;a
+                                </button>
+                              )}
+                              <a
+                                href={`/?q=${encodeURIComponent(r.text)}&run=1`}
+                                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                              >
+                                Find a du&apos;a
+                              </a>
+                            </>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setRequests(removeRequest(r.id))}
+                            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 dark:hover:bg-red-500/20"
+                            aria-label="Remove request"
+                          >
+                            <Trash2 className="size-3.5" />
+                            Remove
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+
               {/* Favorites */}
               <section aria-label="Favorites">
                 <h3 className="mb-3 text-xs font-medium text-slate-500 uppercase tracking-wider font-github">Favorites</h3>
@@ -1264,16 +1496,8 @@ export default function Home() {
             >
               <DuaShareCard
                 personalDua={extractPersonalDua(refinedDua.trim())}
-                hadithSources={
-                  (searchResult?.hadiths ?? [])
-                    .filter((h) => typeof h.metadata?.reference === "string" && (h.metadata.reference as string).trim() !== "")
-                    .slice(0, 8)
-                    .map((h) => {
-                      const edition = typeof h.metadata?.edition === "string" ? (HADITH_EDITION_LABELS[h.metadata.edition] ?? h.metadata.edition) : "";
-                      const ref = typeof h.metadata?.reference === "string" ? h.metadata.reference : "";
-                      return [edition, ref].filter(Boolean).join(" — ");
-                    })
-                }
+                nameOfAllah={searchResult?.name?.content}
+                hadithSources={shareHadithSources}
               />
             </div>
             <section className="mt-6 w-full rounded-2xl border border-slate-200/60 dark:border-slate-500/30 bg-slate-50/95 dark:bg-slate-800/60 backdrop-blur-xl p-4 sm:p-5 shadow-[0_2px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_24px_rgba(0,0,0,0.25)]">
@@ -1338,15 +1562,6 @@ export default function Home() {
                   <Share2 className="size-4 mr-1 inline" />
                   Share
                 </Button>
-                <Button
-                  className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCopyForDuaOS}
-                  aria-label="Copy for DuaOS import"
-                >
-                  {copyFeedbackId === "duaos-copy" ? "Copied" : "Copy for DuaOS"}
-                </Button>
               </div>
             </section>
           </>
@@ -1379,7 +1594,7 @@ export default function Home() {
               Import to Library
             </h2>
             <p className="text-sm text-slate-400 font-github mb-3">
-              Paste shared DuaOS JSON or text list, or choose a file. Du'as will be merged into your library.
+              Paste a du&apos;aOS link, code, JSON, or text list — or choose a file. Du&apos;as will be merged into your library.
             </p>
             <textarea
               value={importInput}
@@ -1415,6 +1630,196 @@ export default function Home() {
                 Cancel
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Share list modal */}
+      {listShareModalOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm"
+          aria-modal="true"
+          role="dialog"
+          aria-label="Share du'a list"
+          onClick={() => setListShareModalOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-sm rounded-t-2xl sm:rounded-2xl border border-slate-200/60 dark:border-slate-500/30 bg-white/95 dark:bg-slate-900/95 p-4 sm:p-6 shadow-[0_4px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl pt-[env(safe-area-inset-top)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setListShareModalOpen(false)}
+              className="absolute top-3 right-3 p-1.5 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+              aria-label="Close"
+            >
+              <X className="size-5" />
+            </button>
+            <h3 className="text-sm font-medium text-slate-700 dark:text-slate-200 font-github mb-1">Share your du&apos;a list</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-github mb-4">
+              {favorites.length + library.length} du&apos;a{favorites.length + library.length === 1 ? "" : "s"} · the list lives in the link, nothing is uploaded.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="font-github border-emerald-500/40 text-emerald-700 dark:text-emerald-300 justify-center hover:bg-emerald-500/10"
+                onClick={() => void handleListCopyLink()}
+              >
+                {listShareFeedback === "copied" ? "Copied" : "Copy link"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
+                onClick={() => void handleListNativeShare()}
+              >
+                {listShareFeedback === "shared" ? "Shared" : "Share…"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
+                onClick={() => void handleListCopyCode()}
+              >
+                Copy code
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
+                onClick={() => void handleExportToNotes()}
+              >
+                {exportToNotesFeedback || "Export .txt"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="col-span-2 font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
+                onClick={handleDownloadLibraryJson}
+              >
+                {shareForDuaOSFeedback || "Download JSON"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Ask for du'a modal */}
+      {requestModalOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm"
+          aria-modal="true"
+          role="dialog"
+          aria-label="Ask for du'a"
+          onClick={() => setRequestModalOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-sm rounded-t-2xl sm:rounded-2xl border border-slate-200/60 dark:border-slate-500/30 bg-white/95 dark:bg-slate-900/95 p-4 sm:p-6 shadow-[0_4px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl pt-[env(safe-area-inset-top)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setRequestModalOpen(false)}
+              className="absolute top-3 right-3 p-1.5 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+              aria-label="Close"
+            >
+              <X className="size-5" />
+            </button>
+            <h3 className="text-sm font-medium text-slate-700 dark:text-slate-200 font-github mb-4">Ask for du&apos;a</h3>
+            {!createdRequestLink ? (
+              <>
+                <textarea
+                  value={requestText}
+                  onChange={(e) => setRequestText(e.target.value.slice(0, 500))}
+                  placeholder="What do you need du'a for?"
+                  maxLength={500}
+                  className="w-full h-24 rounded-lg border border-slate-200/80 dark:border-slate-500/50 bg-slate-50/80 dark:bg-slate-900/50 text-slate-800 dark:text-slate-200 font-github text-sm p-3 resize-y placeholder:text-slate-500"
+                  aria-label="What do you need du'a for?"
+                />
+                <input
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value.slice(0, 80))}
+                  placeholder="Your name (optional)"
+                  className="mt-2 w-full rounded-lg border border-slate-200/80 dark:border-slate-500/50 bg-slate-50/80 dark:bg-slate-900/50 text-slate-800 dark:text-slate-200 font-github text-sm px-3 py-2 placeholder:text-slate-500"
+                  aria-label="Your name (optional)"
+                />
+                <Button
+                  className="mt-3 w-full font-github"
+                  disabled={!requestText.trim() || requestCreating}
+                  onClick={() => void handleCreateRequest()}
+                >
+                  {requestCreating ? "Creating…" : "Create link"}
+                </Button>
+                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 font-github text-center">
+                  The request lives in the link — share it anywhere.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-github mb-2">Your request link:</p>
+                <p className="rounded-lg border border-slate-200/80 dark:border-slate-500/50 bg-slate-50/80 dark:bg-slate-900/50 p-3 text-xs font-github text-slate-700 dark:text-slate-300 break-all select-all">
+                  {createdRequestLink}
+                </p>
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="font-github border-emerald-500/40 text-emerald-700 dark:text-emerald-300 justify-center hover:bg-emerald-500/10"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(createdRequestLink).then(() => setRequestFeedback("req-link"));
+                      setTimeout(() => setRequestFeedback(null), 2000);
+                    }}
+                  >
+                    {requestFeedback === "req-link" ? "Copied" : "Copy link"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
+                    onClick={() => {
+                      void (async () => {
+                        try {
+                          if (navigator.share) {
+                            await navigator.share({ title: "Du'a request", text: requestText.trim(), url: createdRequestLink });
+                            return;
+                          }
+                        } catch {
+                          // fall through
+                        }
+                        await navigator.clipboard.writeText(createdRequestLink);
+                        setRequestFeedback("req-link");
+                        setTimeout(() => setRequestFeedback(null), 2000);
+                      })();
+                    }}
+                  >
+                    Share…
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
+                    onClick={() => {
+                      if (createdRequestCode) {
+                        void navigator.clipboard.writeText(createdRequestCode).then(() => setRequestFeedback("req-code"));
+                        setTimeout(() => setRequestFeedback(null), 2000);
+                      }
+                    }}
+                  >
+                    {requestFeedback === "req-code" ? "Copied" : "Copy code"}
+                  </Button>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 w-full font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
+                  onClick={() => setRequestModalOpen(false)}
+                >
+                  Done
+                </Button>
+              </>
+            )}
           </div>
         </div>
       )}
