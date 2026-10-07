@@ -74,7 +74,7 @@ export default function SendClient() {
   return (
     <div className="min-h-screen bg-transparent text-slate-800 dark:text-slate-200 flex flex-col">
       <Header />
-      <main className="flex-1 mx-auto max-w-2xl w-full px-4 py-8 sm:py-12 pt-24 sm:pt-28 pb-[env(safe-area-inset-bottom)]">
+      <main className="flex-1 mx-auto max-w-2xl w-full px-4 py-8 sm:py-12 pt-32 sm:pt-36 pb-[env(safe-area-inset-bottom)]">
         <header className="mb-8">
           <h1 className="font-serif text-2xl sm:text-3xl font-medium text-slate-800 dark:text-slate-100 mb-2 tracking-tight">
             Du&apos;as for {to ? `${to}'s` : "their"} Umrah

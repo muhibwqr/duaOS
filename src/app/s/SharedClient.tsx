@@ -93,7 +93,7 @@ export default function SharedClient() {
   return (
     <div className="min-h-screen bg-transparent text-slate-800 dark:text-slate-200 flex flex-col">
       <Header />
-      <main className="flex-1 mx-auto max-w-2xl w-full px-4 py-8 sm:py-12 pt-24 sm:pt-28 pb-[env(safe-area-inset-bottom)]">
+      <main className="flex-1 mx-auto max-w-2xl w-full px-4 py-8 sm:py-12 pt-32 sm:pt-36 pb-[env(safe-area-inset-bottom)]">
         {state === "loading" && (
           <p className="font-github text-sm text-slate-500 dark:text-slate-400">Opening shared du&apos;a…</p>
         )}
