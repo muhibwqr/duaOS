@@ -8,8 +8,9 @@ import { MAX_CONTEXT_LENGTH, MAX_REFINE_INPUT_LENGTH } from "@/lib/validation";
 export function useRefine(
   setRefinedDua: (s: string) => void,
   setSaved: (b: boolean) => void
-): { handleRefine: (query: string, refinedDua: string, searchResult: SearchResult | null) => Promise<void>; isRefining: boolean } {
+): { handleRefine: (query: string, refinedDua: string, searchResult: SearchResult | null) => Promise<void>; isRefining: boolean; refineError: string | null } {
   const [isRefining, setIsRefining] = useState(false);
+  const [refineError, setRefineError] = useState<string | null>(null);
 
   const handleRefine = useCallback(
     async (query: string, refinedDua: string, searchResult: SearchResult | null) => {
@@ -21,6 +22,7 @@ export function useRefine(
       const quranVerses = searchResult?.quranVerses ?? (searchResult?.quran ? [searchResult.quran] : []);
       const quranContent = buildQuranContext(quranVerses);
       setIsRefining(true);
+      setRefineError(null);
       setRefinedDua("");
       setSaved(false);
       try {
@@ -48,7 +50,7 @@ export function useRefine(
             if (res.status === 429) msg = "Too many requests. Please try again in a minute.";
             else if (res.status === 503) msg = "Service unavailable. Please try again later.";
           }
-          setRefinedDua(msg);
+          setRefineError(msg);
           return;
         }
         const reader = res.body?.getReader();
@@ -65,7 +67,7 @@ export function useRefine(
         }
       } catch (e) {
         console.error(e);
-        setRefinedDua("Something went wrong. Please try again.");
+        setRefineError("Something went wrong. Please try again.");
       } finally {
         setIsRefining(false);
       }
@@ -73,5 +75,5 @@ export function useRefine(
     [setRefinedDua, setSaved]
   );
 
-  return { handleRefine, isRefining };
+  return { handleRefine, isRefining, refineError };
 }

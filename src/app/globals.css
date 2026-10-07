@@ -8,10 +8,12 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-apple-garamond), ui-serif, serif;
+  --font-sans: var(--font-quicksand), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-apple-garamond), ui-serif, serif;
   --font-mono: ui-monospace, monospace;
   --font-github: "Mona Sans", ui-sans-serif, system-ui, sans-serif;
   --font-calligraphy: "Amiri", serif;
+  --color-surface: var(--surface);
   --color-accent-gold: #d4af37;
   --color-accent-emerald: #059669;
   --accent-green: oklch(0.55 0.15 165);
@@ -58,6 +60,7 @@
 
 :root {
   --radius: 0.625rem;
+  --surface: oklch(1 0 0);
   --background: oklch(0.985 0.002 100);
   --foreground: oklch(0.2 0 0);
   --card: oklch(1 0 0);
@@ -92,6 +95,7 @@
 }
 
 .dark {
+  --surface: oklch(0.19 0 0);
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
