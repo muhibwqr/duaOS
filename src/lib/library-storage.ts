@@ -422,6 +422,7 @@ export function removeFromUmrahList(dua: string): DuaList {
   const key = normalizeDuaText(dua);
   list.items = list.items.filter((i) => normalizeDuaText(i.dua) !== key);
   upsertList(list);
+  setUmrahDone(getUmrahDone().filter((k) => k !== key));
   return list;
 }
 
@@ -436,14 +437,18 @@ export function getUmrahDone(): string[] {
   }
 }
 
+export function setUmrahDone(keys: string[]): string[] {
+  try {
+    if (typeof window !== "undefined") localStorage.setItem(UMRAH_DONE_KEY, JSON.stringify(keys));
+  } catch (e) {
+    console.error("Set umrah done failed", e);
+  }
+  return keys;
+}
+
 export function toggleUmrahDone(dua: string): string[] {
   const key = normalizeDuaText(dua);
   const done = getUmrahDone();
   const next = done.includes(key) ? done.filter((k) => k !== key) : [...done, key];
-  try {
-    if (typeof window !== "undefined") localStorage.setItem(UMRAH_DONE_KEY, JSON.stringify(next));
-  } catch (e) {
-    console.error("Set umrah done failed", e);
-  }
-  return next;
+  return setUmrahDone(next);
 }

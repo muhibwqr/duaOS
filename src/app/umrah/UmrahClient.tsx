@@ -165,7 +165,7 @@ export default function UmrahClient() {
             Collect du&apos;as from friends and carry them with you.
           </p>
           <p className="font-github text-xs text-slate-400 dark:text-slate-500">
-            {items.length} du&apos;a{items.length === 1 ? "" : "s"} · {fromFriends} from friends · {done.length} made
+            {items.length} du&apos;a{items.length === 1 ? "" : "s"} · {fromFriends} from friends · {items.filter((i) => done.includes(normalizeDuaText(i.dua))).length} made
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Button className="font-github bg-emerald-600 hover:bg-emerald-500 text-white border-0" size="sm" onClick={() => setAskOpen(true)}>
@@ -325,7 +325,10 @@ export default function UmrahClient() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => setList(removeFromUmrahList(item.dua))}
+                        onClick={() => {
+                          setList(removeFromUmrahList(item.dua));
+                          setDone(getUmrahDone());
+                        }}
                         className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 dark:hover:bg-red-500/20"
                         aria-label="Remove"
                       >
