@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Github, ShoppingBag, Moon, Sun } from "lucide-react";
+import { Github, ShoppingBag, Moon, Sun, Menu, X } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 
 const GITHUB_REPO_URL = "https://github.com/muhibwqr/duaOS";
@@ -12,8 +12,16 @@ type HeaderProps = {
   onCartClick?: () => void;
 };
 
+const NAV_LINKS = [
+  { href: "/why", label: "why we're doing this" },
+  { href: "/how", label: "how it works" },
+  { href: "/leaderboard", label: "leaderboard" },
+  { href: "/umrah", label: "umrah" },
+];
+
 export function Header({ favoritesCount = 0, onCartClick }: HeaderProps) {
   const [totalDuasCount, setTotalDuasCount] = useState<number | null>(null);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const { theme, setTheme, resolvedDark } = useTheme();
 
   useEffect(() => {
@@ -52,20 +60,22 @@ export function Header({ favoritesCount = 0, onCartClick }: HeaderProps) {
             )}
           </div>
           <nav className="hidden sm:flex items-center gap-8 font-github text-sm text-slate-600 dark:text-slate-400 shrink-0">
-            <Link href="/why" className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">
-              why we're doing this
-            </Link>
-            <Link href="/how" className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">
-              how it works
-            </Link>
-            <Link href="/leaderboard" className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">
-              leaderboard
-            </Link>
-            <Link href="/umrah" className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">
-              umrah
-            </Link>
+            {NAV_LINKS.map((l) => (
+              <Link key={l.href} href={l.href} className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">
+                {l.label}
+              </Link>
+            ))}
           </nav>
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <button
+              type="button"
+              onClick={() => setMobileNavOpen((o) => !o)}
+              className="sm:hidden rounded-xl border border-slate-200/80 dark:border-slate-600/50 bg-slate-100/80 dark:bg-slate-800/80 p-2 text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-200/60 dark:hover:bg-slate-700/60 transition-colors min-h-[44px] min-w-[44px]"
+              aria-label={mobileNavOpen ? "Close menu" : "Open menu"}
+              aria-expanded={mobileNavOpen}
+            >
+              {mobileNavOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+            </button>
             <button
               type="button"
               onClick={() => setTheme(resolvedDark ? "light" : "dark")}
@@ -101,6 +111,23 @@ export function Header({ favoritesCount = 0, onCartClick }: HeaderProps) {
             )}
           </div>
         </div>
+        {mobileNavOpen && (
+          <nav
+            className="sm:hidden mx-auto mt-2 flex max-w-4xl flex-col rounded-2xl border border-slate-200/60 dark:border-slate-600/40 bg-white/90 dark:bg-slate-900/90 px-4 py-2 backdrop-blur-xl shadow-[0_2px_20px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_20px_rgba(0,0,0,0.3)]"
+            aria-label="Mobile navigation"
+          >
+            {NAV_LINKS.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                onClick={() => setMobileNavOpen(false)}
+                className="border-b border-slate-200/60 dark:border-slate-600/30 last:border-0 py-3 font-github text-sm text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
+              >
+                {l.label}
+              </Link>
+            ))}
+          </nav>
+        )}
       </div>
     </header>
   );
