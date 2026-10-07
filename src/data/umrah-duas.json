@@ -1,0 +1,128 @@
+[
+  {
+    "id": "talbiyah",
+    "stage": "Ihram",
+    "title": "The Talbiyah",
+    "arabic": "لَبَّيْكَ اللَّهُمَّ لَبَّيْكَ، لَبَّيْكَ لَا شَرِيكَ لَكَ لَبَّيْكَ، إِنَّ الْحَمْدَ وَالنِّعْمَةَ لَكَ وَالْمُلْكَ، لَا شَرِيكَ لَكَ",
+    "transliteration": "Labbayk Allahumma labbayk, labbayka la sharika laka labbayk, innal-hamda wan-ni'mata laka wal-mulk, la sharika lak",
+    "translation": "Here I am, O Allah, here I am. Here I am, You have no partner, here I am. Truly all praise, favour and sovereignty are Yours. You have no partner.",
+    "source": "Sahih al-Bukhari 1549, Sahih Muslim 1184"
+  },
+  {
+    "id": "enter-masjid",
+    "stage": "Arriving",
+    "title": "Entering the masjid",
+    "arabic": "اللَّهُمَّ افْتَحْ لِي أَبْوَابَ رَحْمَتِكَ",
+    "transliteration": "Allahumma-ftah li abwaba rahmatik",
+    "translation": "O Allah, open for me the doors of Your mercy.",
+    "source": "Sahih Muslim 713"
+  },
+  {
+    "id": "tawaf-rukn",
+    "stage": "Tawaf",
+    "title": "Between the Yemeni Corner and the Black Stone",
+    "arabic": "رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ",
+    "transliteration": "Rabbana atina fid-dunya hasanatan wa fil-akhirati hasanatan wa qina 'adhaban-nar",
+    "translation": "Our Lord, give us good in this world and good in the Hereafter, and protect us from the punishment of the Fire.",
+    "source": "Qur'an 2:201; Sunan Abi Dawud 1892"
+  },
+  {
+    "id": "maqam-ibrahim",
+    "stage": "Tawaf",
+    "title": "At the Station of Ibrahim",
+    "arabic": "وَاتَّخِذُوا مِن مَّقَامِ إِبْرَاهِيمَ مُصَلًّى",
+    "transliteration": "Wattakhidhu min maqami Ibrahima musalla",
+    "translation": "And take the Station of Ibrahim as a place of prayer.",
+    "source": "Qur'an 2:125 (recited before the two rak'ahs after Tawaf — Sahih Muslim 1218)"
+  },
+  {
+    "id": "safa-marwa",
+    "stage": "Sa'i",
+    "title": "On Safa and Marwa",
+    "arabic": "لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ، لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ، أَنْجَزَ وَعْدَهُ، وَنَصَرَ عَبْدَهُ، وَهَزَمَ الْأَحْزَابَ وَحْدَهُ",
+    "transliteration": "La ilaha illallahu wahdahu la sharika lah, lahul-mulku wa lahul-hamdu wa huwa 'ala kulli shay'in qadir. La ilaha illallahu wahdah, anjaza wa'dah, wa nasara 'abdah, wa hazamal-ahzaba wahdah",
+    "translation": "There is no god but Allah alone, without partner. His is the dominion and His is the praise, and He is able to do all things. There is no god but Allah alone; He fulfilled His promise, gave victory to His servant, and alone defeated the confederates.",
+    "source": "Sahih Muslim 1218"
+  },
+  {
+    "id": "safa-opening",
+    "stage": "Sa'i",
+    "title": "Beginning Sa'i at Safa",
+    "arabic": "إِنَّ الصَّفَا وَالْمَرْوَةَ مِن شَعَائِرِ اللَّهِ",
+    "transliteration": "Innas-Safa wal-Marwata min sha'a'irillah",
+    "translation": "Indeed, Safa and Marwa are among the symbols of Allah.",
+    "source": "Qur'an 2:158; Sahih Muslim 1218"
+  },
+  {
+    "id": "sayyidul-istighfar",
+    "stage": "Anytime",
+    "title": "The master supplication for forgiveness",
+    "arabic": "اللَّهُمَّ أَنْتَ رَبِّي لَا إِلَهَ إِلَّا أَنْتَ، خَلَقْتَنِي وَأَنَا عَبْدُكَ، وَأَنَا عَلَى عَهْدِكَ وَوَعْدِكَ مَا اسْتَطَعْتُ، أَعُوذُ بِكَ مِنْ شَرِّ مَا صَنَعْتُ، أَبُوءُ لَكَ بِنِعْمَتِكَ عَلَيَّ، وَأَبُوءُ بِذَنْبِي فَاغْفِرْ لِي فَإِنَّهُ لَا يَغْفِرُ الذُّنُوبَ إِلَّا أَنْتَ",
+    "transliteration": "Allahumma anta Rabbi la ilaha illa ant, khalaqtani wa ana 'abduk, wa ana 'ala 'ahdika wa wa'dika mastata't, a'udhu bika min sharri ma sana't, abu'u laka bini'matika 'alayy, wa abu'u bidhanbi faghfir li fa innahu la yaghfirudh-dhunuba illa ant",
+    "translation": "O Allah, You are my Lord, there is no god but You. You created me and I am Your servant, and I keep Your covenant and promise as far as I am able. I seek refuge in You from the evil I have done. I acknowledge Your favour upon me and I acknowledge my sin, so forgive me, for none forgives sins but You.",
+    "source": "Sahih al-Bukhari 6306"
+  },
+  {
+    "id": "huda-tuqa",
+    "stage": "Anytime",
+    "title": "Guidance, piety, chastity and sufficiency",
+    "arabic": "اللَّهُمَّ إِنِّي أَسْأَلُكَ الْهُدَى وَالتُّقَى وَالْعَفَافَ وَالْغِنَى",
+    "transliteration": "Allahumma inni as'alukal-huda wat-tuqa wal-'afafa wal-ghina",
+    "translation": "O Allah, I ask You for guidance, piety, chastity and self-sufficiency.",
+    "source": "Sahih Muslim 2721"
+  },
+  {
+    "id": "afiyah",
+    "stage": "Anytime",
+    "title": "Well-being in this world and the next",
+    "arabic": "اللَّهُمَّ إِنِّي أَسْأَلُكَ الْعَفْوَ وَالْعَافِيَةَ فِي الدُّنْيَا وَالْآخِرَةِ",
+    "transliteration": "Allahumma inni as'alukal-'afwa wal-'afiyata fid-dunya wal-akhirah",
+    "translation": "O Allah, I ask You for pardon and well-being in this world and the Hereafter.",
+    "source": "Sunan Abi Dawud 5074, Sunan Ibn Majah 3871"
+  },
+  {
+    "id": "dhikr-shukr",
+    "stage": "Anytime",
+    "title": "Help me remember and thank You",
+    "arabic": "اللَّهُمَّ أَعِنِّي عَلَى ذِكْرِكَ وَشُكْرِكَ وَحُسْنِ عِبَادَتِكَ",
+    "transliteration": "Allahumma a'inni 'ala dhikrika wa shukrika wa husni 'ibadatik",
+    "translation": "O Allah, help me to remember You, to thank You, and to worship You well.",
+    "source": "Sunan Abi Dawud 1522"
+  },
+  {
+    "id": "hearts-firm",
+    "stage": "Anytime",
+    "title": "Keep our hearts firm",
+    "arabic": "رَبَّنَا لَا تُزِغْ قُلُوبَنَا بَعْدَ إِذْ هَدَيْتَنَا وَهَبْ لَنَا مِن لَّدُنكَ رَحْمَةً ۚ إِنَّكَ أَنتَ الْوَهَّابُ",
+    "transliteration": "Rabbana la tuzigh qulubana ba'da idh hadaytana wa hab lana min ladunka rahmah, innaka antal-Wahhab",
+    "translation": "Our Lord, do not let our hearts deviate after You have guided us, and grant us mercy from Yourself. Indeed, You are the Bestower.",
+    "source": "Qur'an 3:8"
+  },
+  {
+    "id": "parents",
+    "stage": "Anytime",
+    "title": "For parents",
+    "arabic": "رَّبِّ ارْحَمْهُمَا كَمَا رَبَّيَانِي صَغِيرًا",
+    "transliteration": "Rabbir-hamhuma kama rabbayani saghira",
+    "translation": "My Lord, have mercy upon them as they brought me up when I was small.",
+    "source": "Qur'an 17:24"
+  },
+  {
+    "id": "believers",
+    "stage": "Anytime",
+    "title": "For yourself, your parents and all believers",
+    "arabic": "رَّبِّ اغْفِرْ لِي وَلِوَالِدَيَّ وَلِمَن دَخَلَ بَيْتِيَ مُؤْمِنًا وَلِلْمُؤْمِنِينَ وَالْمُؤْمِنَاتِ",
+    "transliteration": "Rabbighfir li wa liwalidayya wa liman dakhala baytiya mu'minan wa lil-mu'minina wal-mu'minat",
+    "translation": "My Lord, forgive me and my parents and whoever enters my house as a believer, and the believing men and believing women.",
+    "source": "Qur'an 71:28"
+  },
+  {
+    "id": "knowledge",
+    "stage": "Anytime",
+    "title": "Increase me in knowledge",
+    "arabic": "رَّبِّ زِدْنِي عِلْمًا",
+    "transliteration": "Rabbi zidni 'ilma",
+    "translation": "My Lord, increase me in knowledge.",
+    "source": "Qur'an 20:114"
+  }
+]
