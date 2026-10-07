@@ -255,9 +255,7 @@ export default function Home() {
     }
   }, [edition, availableEditions]);
 
-  useEffect(() => {
-    if (searchResult !== null) setSourcesPopupOpen(true);
-  }, [searchResult]);
+
 
   // Persist the refined du'a onto the history entry it was produced from.
   useEffect(() => {
@@ -848,7 +846,7 @@ export default function Home() {
           onClick={() => setSourcesPopupOpen(false)}
         >
           <div
-            className="relative w-full max-w-xl rounded-t-2xl sm:rounded-2xl border border-slate-200/60 dark:border-slate-500/30 bg-white/95 dark:bg-slate-900/95 p-4 sm:p-6 shadow-[0_4px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_32px_rgba(0,0,0,0.4)] max-h-[85dvh] flex flex-col backdrop-blur-xl pt-[env(safe-area-inset-top)]"
+            className="relative w-full max-w-xl rounded-t-2xl sm:rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-surface p-4 sm:p-6 shadow-[0_4px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_32px_rgba(0,0,0,0.4)] max-h-[85dvh] flex flex-col pt-[env(safe-area-inset-top)]"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -888,7 +886,7 @@ export default function Home() {
                     return (
                       <details
                         key={h.id ?? i}
-                        className="group rounded-lg border border-slate-200/60 dark:border-slate-500/30 bg-slate-50/80 dark:bg-slate-800/50 open:bg-slate-100/80 dark:open:bg-slate-700/50 transition-colors"
+                        className="group rounded-lg border border-slate-200 dark:border-slate-700/60 bg-slate-50/80 dark:bg-slate-800/50 open:bg-slate-100/80 dark:open:bg-slate-700/50 transition-colors"
                       >
                         <summary className="list-none cursor-pointer px-3 py-2 flex items-center justify-between gap-3">
                           <div className="min-w-0">
@@ -897,7 +895,7 @@ export default function Home() {
                               {label || h.content.slice(0, 80)}
                             </p>
                           </div>
-                          <ChevronDown className="size-4 text-slate-400 dark:text-slate-500 transition-transform group-open:rotate-180 shrink-0" />
+                          <ChevronDown className="size-4 text-slate-400 dark:text-slate-400 transition-transform group-open:rotate-180 shrink-0" />
                         </summary>
                         <div className="px-3 pb-3">
                           <p className="text-sm text-slate-800 dark:text-slate-200 font-calligraphy whitespace-pre-wrap">{h.content}</p>
@@ -925,7 +923,7 @@ export default function Home() {
                     );
                   })}
                 </div>
-                ) : <p className="text-sm text-slate-500 dark:text-slate-400 font-github">No hadith match with reference.</p>;
+                ) : null;
               })()}
               {searchResult.quran?.content && (typeof searchResult.quran?.metadata?.reference === "string" || typeof searchResult.quran?.metadata?.surah === "string") ? (
                 <div>
@@ -961,14 +959,12 @@ export default function Home() {
                     </p>
                   ) : null}
                 </div>
-              ) : (
-                <p className="text-sm text-slate-500 dark:text-slate-400 font-github">No Quran verse match with citation.</p>
-              )}
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-github border-t border-slate-200/60 dark:border-slate-500/30 pt-3">
+              ) : null}
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-github border-t border-slate-200 dark:border-slate-700/60 pt-3">
                 DuaOS connects your intention to verified sources: Names of Allah, hadith, and the Qur&apos;an (The Noble Quran, English).
               </p>
               {refinedDua ? (
-                <div className="border-t border-slate-200/60 dark:border-slate-500/30 pt-3 mt-3">
+                <div className="border-t border-slate-200 dark:border-slate-700/60 pt-3 mt-3">
                   <p className="text-emerald-600 dark:text-emerald-400 font-github not-italic text-sm mb-2">Refined du&apos;a</p>
                   <div className="text-sm text-slate-800 dark:text-slate-200 font-calligraphy leading-relaxed">
                     <ReactMarkdown
@@ -1030,7 +1026,7 @@ export default function Home() {
           onClick={() => setShareModalOpen(false)}
         >
           <div
-            className="relative w-full max-w-sm rounded-t-2xl sm:rounded-2xl border border-slate-200/60 dark:border-slate-500/30 bg-white/95 dark:bg-slate-900/95 p-4 sm:p-6 shadow-[0_4px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_32px_rgba(0,0,0,0.4)] max-h-[85dvh] overflow-y-auto backdrop-blur-xl pt-[env(safe-area-inset-top)]"
+            className="relative w-full max-w-sm rounded-t-2xl sm:rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-surface p-4 sm:p-6 shadow-[0_4px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_32px_rgba(0,0,0,0.4)] max-h-[85dvh] overflow-y-auto pt-[env(safe-area-inset-top)]"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -1065,7 +1061,7 @@ export default function Home() {
                   <p className="mb-3 text-sm text-red-600 dark:text-red-300 font-github">{shareError}</p>
                 )}
                 <div
-                  className="mx-auto mb-4 overflow-hidden rounded-xl border border-slate-200/60 dark:border-slate-500/30"
+                  className="mx-auto mb-4 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700/60"
                   style={{ width: 302, height: 302 }}
                 >
                   <div style={{ transform: "scale(0.28)", transformOrigin: "top left", width: 1080, height: 1080 }}>
@@ -1088,7 +1084,7 @@ export default function Home() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
+                    className="font-github border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
                     onClick={() => void shareNative()}
                   >
                     Share…
@@ -1096,7 +1092,7 @@ export default function Home() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
+                    className="font-github border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
                     onClick={() => void shareDownload()}
                     disabled={isSharing}
                   >
@@ -1105,7 +1101,7 @@ export default function Home() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
+                    className="font-github border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
                     onClick={shareCopyText}
                   >
                     {shareModalFeedback === "text" ? "Copied" : "Copy text"}
@@ -1113,7 +1109,7 @@ export default function Home() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
+                    className="font-github border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
                     onClick={() => void shareToTwitter()}
                   >
                     X / Twitter
@@ -1121,7 +1117,7 @@ export default function Home() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
+                    className="font-github border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
                     onClick={() => void shareCopyCode()}
                   >
                     {shareModalFeedback === "code" ? "Code copied" : "Copy code"}
@@ -1143,11 +1139,11 @@ export default function Home() {
         onClick={() => setFavoritesPanelOpen(false)}
       />
       <aside
-        className={`fixed top-0 right-0 bottom-0 z-50 w-full max-w-md flex flex-col border-l border-slate-200/60 dark:border-slate-500/30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-[0_0_40px_rgba(0,0,0,0.08)] dark:shadow-[0_0_40px_rgba(0,0,0,0.4)] transition-transform duration-300 ease-out pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] ${favoritesPanelOpen ? "translate-x-0" : "translate-x-full"}`}
+        className={`fixed top-0 right-0 bottom-0 z-50 w-full max-w-md flex flex-col border-l border-slate-200 dark:border-slate-700/60 bg-surface backdrop-blur-xl shadow-[0_0_40px_rgba(0,0,0,0.08)] dark:shadow-[0_0_40px_rgba(0,0,0,0.4)] transition-transform duration-300 ease-out pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] ${favoritesPanelOpen ? "translate-x-0" : "translate-x-full"}`}
         aria-label="Favorites and Library"
         aria-hidden={!favoritesPanelOpen}
       >
-            <div className="flex items-center justify-between gap-2 sm:gap-4 border-b border-slate-200/60 dark:border-slate-500/30 px-3 py-3 sm:px-4 flex-wrap">
+            <div className="flex items-center justify-between gap-2 sm:gap-4 border-b border-slate-200 dark:border-slate-700/60 px-3 py-3 sm:px-4 flex-wrap">
               <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100 font-github uppercase tracking-wider">
                 Favorites & Library
               </h2>
@@ -1193,7 +1189,7 @@ export default function Home() {
                         setHistory([]);
                         setCurrentHistoryId(null);
                       }}
-                      className="text-xs font-github text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                      className="text-xs font-github text-slate-400 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
                     >
                       Clear
                     </button>
@@ -1227,7 +1223,7 @@ export default function Home() {
                             setHistory(removeHistory(h.id));
                             if (currentHistoryId === h.id) setCurrentHistoryId(null);
                           }}
-                          className="shrink-0 rounded-md p-1.5 text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 dark:hover:bg-red-500/20 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                          className="shrink-0 rounded-md p-1.5 text-slate-400 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 dark:hover:bg-red-500/20 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
                           aria-label={`Remove "${h.query}" from history`}
                         >
                           <X className="size-3.5" />
@@ -1247,7 +1243,7 @@ export default function Home() {
                     value={newListTitle}
                     onChange={(e) => setNewListTitle(e.target.value.slice(0, 80))}
                     placeholder="New list title"
-                    className="flex-1 min-w-0 rounded-lg border border-slate-200/80 dark:border-slate-500/50 bg-slate-50/80 dark:bg-slate-900/50 text-slate-800 dark:text-slate-200 font-github text-sm px-3 py-1.5 placeholder:text-slate-500"
+                    className="flex-1 min-w-0 rounded-lg border border-slate-200 dark:border-slate-700/60 bg-slate-50/80 dark:bg-slate-900/50 text-slate-800 dark:text-slate-200 font-github text-sm px-3 py-1.5 placeholder:text-slate-500"
                     aria-label="New list title"
                   />
                   <button
@@ -1271,7 +1267,7 @@ export default function Home() {
                 ) : (
                   <ul className="space-y-3">
                     {lists.map((l) => (
-                      <li key={l.id} className="rounded-lg border border-slate-200/60 dark:border-slate-500/30 bg-slate-50/80 dark:bg-slate-800/50 p-3">
+                      <li key={l.id} className="rounded-lg border border-slate-200 dark:border-slate-700/60 bg-slate-50/80 dark:bg-slate-800/50 p-3">
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-sm font-github text-slate-800 dark:text-slate-200 truncate">{l.title}</p>
                           <p className="text-xs font-github text-slate-500 dark:text-slate-400 shrink-0">
@@ -1323,7 +1319,7 @@ export default function Home() {
                           <button
                             type="button"
                             onClick={() => setLists(removeList(l.id))}
-                            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 dark:hover:bg-red-500/20"
+                            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-400 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 dark:hover:bg-red-500/20"
                             aria-label={`Delete list ${l.title}`}
                           >
                             <Trash2 className="size-3.5" />
@@ -1355,7 +1351,7 @@ export default function Home() {
                 ) : (
                   <ul className="space-y-4">
                     {[...requests].reverse().map((r) => (
-                      <li key={r.id} className="rounded-lg border border-slate-200/60 dark:border-slate-500/30 bg-slate-50/80 dark:bg-slate-800/50 p-3">
+                      <li key={r.id} className="rounded-lg border border-slate-200 dark:border-slate-700/60 bg-slate-50/80 dark:bg-slate-800/50 p-3">
                         <p className="whitespace-pre-wrap text-sm text-slate-800 dark:text-slate-200 font-calligraphy leading-relaxed">{r.text}</p>
                         <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400 font-github">
                           {r.direction === "sent" ? (
@@ -1405,7 +1401,7 @@ export default function Home() {
                           <button
                             type="button"
                             onClick={() => setRequests(removeRequest(r.id))}
-                            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 dark:hover:bg-red-500/20"
+                            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-400 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 dark:hover:bg-red-500/20"
                             aria-label="Remove request"
                           >
                             <Trash2 className="size-3.5" />
@@ -1426,7 +1422,7 @@ export default function Home() {
                 ) : (
                   <>
                     <Button
-                      className="mb-4 w-full font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      className="mb-4 w-full font-github border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                       variant="outline"
                       size="sm"
                       onClick={() => {
@@ -1438,7 +1434,7 @@ export default function Home() {
                     </Button>
                     <ul className="space-y-4">
                       {[...favorites].reverse().map((item) => (
-                        <li key={item.id} className="rounded-lg border border-slate-200/60 dark:border-slate-500/30 bg-slate-50/80 dark:bg-slate-800/50 p-3">
+                        <li key={item.id} className="rounded-lg border border-slate-200 dark:border-slate-700/60 bg-slate-50/80 dark:bg-slate-800/50 p-3">
                           <p className="whitespace-pre-wrap text-sm text-slate-800 dark:text-slate-200 font-calligraphy leading-relaxed">{item.dua}</p>
                           {item.nameOfAllah && (
                             <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400 font-github">— {item.nameOfAllah}</p>
@@ -1447,7 +1443,7 @@ export default function Home() {
                             <button
                               type="button"
                               onClick={() => handleAddDuaToFavorites({ dua: item.dua, nameOfAllah: item.nameOfAllah, hadithSnippet: item.hadithSnippet })}
-                              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20"
+                              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-400 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20"
                               aria-label="Add to favorites"
                             >
                               <Plus className="size-3.5" />
@@ -1476,7 +1472,7 @@ export default function Home() {
                                   if (e.target.value) setLists(addToList(e.target.value, { dua: item.dua, name: item.nameOfAllah, at: item.addedAt }));
                                   e.target.value = "";
                                 }}
-                                className="rounded-md border border-slate-200/80 dark:border-slate-500/50 bg-transparent px-1.5 py-1 text-xs font-github text-slate-500 dark:text-slate-400"
+                                className="rounded-md border border-slate-200 dark:border-slate-700/60 bg-transparent px-1.5 py-1 text-xs font-github text-slate-500 dark:text-slate-400"
                                 aria-label="Add to list"
                               >
                                 <option value="">Add to list…</option>
@@ -1488,7 +1484,7 @@ export default function Home() {
                             <button
                               type="button"
                               onClick={() => setFavoritesState(removeFromFavorites(item.id))}
-                              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 dark:hover:bg-red-500/20"
+                              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-400 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 dark:hover:bg-red-500/20"
                               aria-label="Remove"
                             >
                               <Trash2 className="size-3.5" />
@@ -1512,7 +1508,7 @@ export default function Home() {
                     {[...library].reverse().map((entry, i) => {
                       const entryId = `library-${entry.at}-${i}`;
                       return (
-                        <li key={entryId} className="rounded-lg border border-slate-200/60 dark:border-slate-500/30 bg-slate-50/80 dark:bg-slate-800/50 p-3">
+                        <li key={entryId} className="rounded-lg border border-slate-200 dark:border-slate-700/60 bg-slate-50/80 dark:bg-slate-800/50 p-3">
                           <p className="whitespace-pre-wrap text-sm text-slate-800 dark:text-slate-200 font-calligraphy leading-relaxed">{entry.dua}</p>
                           {entry.name && (
                             <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400 font-github">— {entry.name}</p>
@@ -1521,7 +1517,7 @@ export default function Home() {
                             <button
                               type="button"
                               onClick={() => handleAddDuaToFavorites({ dua: entry.dua, nameOfAllah: entry.name })}
-                              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20"
+                              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-400 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20"
                               aria-label="Add to favorites"
                             >
                               <Plus className="size-3.5" />
@@ -1542,7 +1538,7 @@ export default function Home() {
                                   if (e.target.value) setLists(addToList(e.target.value, entry));
                                   e.target.value = "";
                                 }}
-                                className="rounded-md border border-slate-200/80 dark:border-slate-500/50 bg-transparent px-1.5 py-1 text-xs font-github text-slate-500 dark:text-slate-400"
+                                className="rounded-md border border-slate-200 dark:border-slate-700/60 bg-transparent px-1.5 py-1 text-xs font-github text-slate-500 dark:text-slate-400"
                                 aria-label="Add to list"
                               >
                                 <option value="">Add to list…</option>
@@ -1554,7 +1550,7 @@ export default function Home() {
                             <button
                               type="button"
                               onClick={() => handleRemoveFromLibrary(entry)}
-                              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 dark:hover:bg-red-500/20"
+                              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-400 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 dark:hover:bg-red-500/20"
                               aria-label="Remove from library"
                             >
                               <Trash2 className="size-3.5" />
@@ -1572,7 +1568,7 @@ export default function Home() {
               </section>
 
               {/* Sync */}
-              <section aria-label="Sync" className="border-t border-slate-200/60 dark:border-slate-500/30 pt-4">
+              <section aria-label="Sync" className="border-t border-slate-200 dark:border-slate-700/60 pt-4">
                 <h3 className="mb-2 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider font-github">Sync</h3>
                 <button
                   type="button"
@@ -1603,7 +1599,7 @@ export default function Home() {
         <h1 className="font-serif text-xl sm:text-2xl text-slate-800 dark:text-slate-100 text-center mb-4 sm:mb-6 leading-relaxed mt-2 sm:mt-4 px-1">
           What do you want to make du'a for today?
         </h1>
-        <div className="group w-full flex items-center gap-2 rounded-2xl border border-slate-200/80 dark:border-slate-500/40 bg-white/90 dark:bg-slate-800/60 px-4 py-3 min-h-[52px] backdrop-blur-xl transition-all duration-200 shadow-[0_2px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_24px_rgba(0,0,0,0.3)] hover:border-emerald-400/40 dark:hover:border-emerald-500/50">
+        <div className="group w-full flex items-center gap-2 rounded-2xl border border-slate-200/80 dark:border-slate-500/40 bg-surface px-4 py-3 min-h-[52px] transition-all duration-200 shadow-[0_2px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_24px_rgba(0,0,0,0.3)] hover:border-emerald-400/40 dark:hover:border-emerald-500/50">
           <div className="flex-1 min-w-0 relative flex items-center">
             <input
               type="text"
@@ -1641,12 +1637,12 @@ export default function Home() {
                   </option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-0 size-3.5 pointer-events-none text-slate-400 dark:text-slate-500 shrink-0" aria-hidden />
+              <ChevronDown className="absolute right-0 size-3.5 pointer-events-none text-slate-400 dark:text-slate-400 shrink-0" aria-hidden />
             </div>
             <button
               type="button"
               onClick={toggleVoiceInput}
-              className={`shrink-0 rounded-md transition-colors p-2 border border-slate-200/80 dark:border-slate-500/50 ${isRecording ? "text-red-600 bg-red-500/10" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"}`}
+              className={`shrink-0 rounded-md transition-colors p-2 border border-slate-200 dark:border-slate-700/60 ${isRecording ? "text-red-600 bg-red-500/10" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"}`}
               aria-label={isRecording ? "Stop recording" : "Voice input"}
             >
               <Mic className="size-6" />
@@ -1680,32 +1676,38 @@ export default function Home() {
               key={text}
               type="button"
               onClick={() => setQuery(text)}
-              className="rounded-full border border-slate-200/80 dark:border-slate-500/50 bg-white/80 dark:bg-slate-800/60 px-3 py-1.5 text-sm text-slate-700 dark:text-slate-300 font-github shadow-sm hover:bg-slate-100 dark:hover:bg-slate-700 hover:border-slate-300/80 dark:hover:border-slate-500/60 transition-colors"
+              className="rounded-full border border-slate-200 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/60 px-3 py-1.5 text-sm text-slate-700 dark:text-slate-300 font-github shadow-sm hover:bg-slate-100 dark:hover:bg-slate-700 hover:border-slate-300/80 dark:hover:border-slate-500/60 transition-colors"
             >
               {text}
             </button>
           ))}
+          {searchResult === null && !isSearching && (() => {
+            const recents = history
+              .filter((h) => !INPUT_SUGGESTIONS.some((s) => s.trim().toLowerCase() === h.query.trim().toLowerCase()))
+              .slice(0, 4);
+            if (recents.length === 0) return null;
+            return (
+            <>
+              <span className="hidden sm:inline self-center text-xs font-github text-slate-400">recent:</span>
+              {recents.map((h) => (
+                  <button
+                    key={h.id}
+                    type="button"
+                    onClick={() => openHistory(h)}
+                    className="rounded-full border border-dashed border-slate-200 dark:border-slate-700/60 bg-transparent px-3 py-1.5 text-sm text-slate-500 dark:text-slate-400 font-github hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 transition-colors max-w-[220px] truncate"
+                  >
+                    {h.query}
+                  </button>
+                ))}
+            </>
+            );
+          })()}
         </div>
-        {searchResult === null && !isSearching && history.length > 0 && (
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-            <span className="text-xs font-github text-slate-400 dark:text-slate-500">recent:</span>
-            {history.slice(0, 4).map((h) => (
-              <button
-                key={h.id}
-                type="button"
-                onClick={() => openHistory(h)}
-                className="rounded-full border border-dashed border-slate-300/80 dark:border-slate-600/50 bg-transparent px-3 py-1.5 text-sm text-slate-500 dark:text-slate-400 font-github hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 transition-colors max-w-[220px] truncate"
-              >
-                {h.query}
-              </button>
-            ))}
-          </div>
-        )}
         <a
           href={MUHIB_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-8 inline-flex items-center gap-2 rounded-full border border-slate-200/80 dark:border-slate-500/50 bg-white/80 dark:bg-slate-800/60 px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-400/40 dark:hover:border-emerald-500/50 font-github backdrop-blur-xl shadow-[0_2px_12px_rgba(0,0,0,0.05)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.2)] transition-colors duration-200"
+          className="mt-8 inline-flex items-center gap-2 rounded-full border border-slate-200 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/60 px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-400/40 dark:hover:border-emerald-500/50 font-github backdrop-blur-xl shadow-[0_2px_12px_rgba(0,0,0,0.05)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.2)] transition-colors duration-200"
         >
           <span>Built by</span>
           <Image
@@ -1721,42 +1723,59 @@ export default function Home() {
       {/* Results below the centered block */}
       <div className="mx-auto max-w-2xl w-full px-4 pb-[max(3rem,env(safe-area-inset-bottom))]">
         {searchError && (
-          <p className="mt-6 text-center text-sm text-amber-300/90 font-github">{searchError}</p>
+          <p className="mt-6 text-center text-sm text-amber-600 dark:text-amber-300/90 font-github">{searchError}</p>
+        )}
+        {isSearching && searchResult === null && (
+          <section className="mt-8 w-full rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-surface p-4 sm:p-5 animate-pulse" aria-label="Searching">
+            <div className="h-7 w-40 rounded bg-slate-200/70 dark:bg-slate-700/50" />
+            <div className="mt-4 h-4 w-3/4 rounded bg-slate-200/70 dark:bg-slate-700/50" />
+            <div className="mt-2 h-4 w-1/2 rounded bg-slate-200/70 dark:bg-slate-700/50" />
+          </section>
         )}
         {searchResult !== null && (
-          <section className="mt-8 w-full rounded-2xl border border-slate-200/60 dark:border-slate-500/30 bg-slate-50/95 dark:bg-slate-800/60 backdrop-blur-xl p-4 sm:p-5 text-slate-800 dark:text-slate-200 font-github shadow-[0_2px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_24px_rgba(0,0,0,0.25)]">
-            <h2 className="mb-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">From search</h2>
-            {searchResult.name && (
-              <p className="mb-2">
-                <span className="font-medium text-emerald-600 dark:text-emerald-400">Name of Allah:</span> <span className="font-calligraphy text-slate-800 dark:text-slate-200">{searchResult.name.content}</span>
-              </p>
-            )}
+          <section className="mt-8 w-full rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-surface p-4 sm:p-5 text-slate-800 dark:text-slate-200 font-github shadow-[0_2px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_24px_rgba(0,0,0,0.25)]">
             {(() => {
               const hadithList = (searchResult.hadiths ?? (searchResult.hadith ? [searchResult.hadith] : [])).filter(
                 (h) => typeof h.metadata?.reference === "string" && h.metadata.reference.trim() !== ""
               );
-              return hadithList.length > 0 ? (
-                <div className="mb-2 space-y-2">
-                  <span className="font-medium text-emerald-600 dark:text-emerald-400">Hadith (by relevance)</span>
-                  {hadithList.slice(0, 3).map((h, i) => (
-                    <p key={h.id ?? i} className="font-calligraphy text-slate-800 dark:text-slate-200">
-                      {h.content}
-                      <span className="ml-1 text-xs text-slate-500 dark:text-slate-400">({typeof h.metadata?.reference === "string" ? h.metadata.reference : ""})</span>
-                    </p>
-                  ))}
-                  {hadithList.length > 3 && (
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Also relevant: {hadithList.slice(3).map((h) => h.metadata?.reference).join(", ")}
-                    </p>
+              const name = searchResult.name ? parseNameContent(searchResult.name.content) : null;
+              return (
+                <>
+                  {name && (
+                    <header className="mb-4">
+                      <p className="font-calligraphy text-3xl sm:text-4xl text-slate-800 dark:text-slate-100 leading-tight" dir="auto">{name.arabic || name.english}</p>
+                      <p className="mt-1 font-github text-sm text-emerald-700 dark:text-emerald-400">
+                        {name.arabic ? name.english : ""}{name.meaning ? `${name.arabic ? " · " : ""}${name.meaning}` : ""}
+                      </p>
+                    </header>
                   )}
-                </div>
-              ) : null;
+                  {hadithList.length > 0 && (
+                    <div className="mb-3">
+                      <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Hadith</h3>
+                      <div className="space-y-2">
+                        {hadithList.slice(0, 3).map((h, i) => (
+                          <p key={h.id ?? i} className="font-calligraphy text-slate-800 dark:text-slate-200">
+                            {h.content}
+                            <span className="ml-1 text-xs text-slate-500 dark:text-slate-400 font-github">({typeof h.metadata?.reference === "string" ? h.metadata.reference : ""})</span>
+                          </p>
+                        ))}
+                      </div>
+                      {hadithList.length > 3 && (
+                        <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+                          Also relevant: {hadithList.slice(3).map((h) => h.metadata?.reference).join(", ")}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </>
+              );
             })()}
             {searchResult.quran?.content && (typeof searchResult.quran.metadata?.reference === "string" || typeof searchResult.quran.metadata?.surah === "string") && (
-              <div className="mb-2">
+              <div className="mb-3">
+                <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Qur&apos;an</h3>
                 <p className="font-calligraphy">
-                  <span className="font-medium text-emerald-600 dark:text-emerald-400">Quran:</span> {searchResult.quran.content}
-                  <span className="ml-1 text-xs text-slate-500">
+                  {searchResult.quran.content}
+                  <span className="ml-1 text-xs text-slate-500 dark:text-slate-400 font-github">
                     ({typeof searchResult.quran.metadata?.surah === "string" ? searchResult.quran.metadata.surah : ""} {typeof searchResult.quran.metadata?.reference === "string" ? searchResult.quran.metadata.reference : ""})
                   </span>
                 </p>
@@ -1775,11 +1794,11 @@ export default function Home() {
               <p className="mb-2 text-slate-500 dark:text-slate-400 text-sm">No matching sources found; you can still refine your intention into a du'a.</p>
             )}
             {usedFailsafe && (
-              <p className="mt-2 text-xs text-slate-500 font-github">Matched using online search.</p>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 font-github">Matched using online search.</p>
             )}
             <div className="mt-3 flex flex-wrap gap-2">
               <Button
-                className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="font-github border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10"
                 variant="outline"
                 size="sm"
                 onClick={() => void handleRefine(query, refinedDua, searchResult)}
@@ -1787,6 +1806,24 @@ export default function Home() {
               >
                 {isRefining ? "Refining…" : "Refine into du'a"}
               </Button>
+              {(() => {
+                const hadithList = (searchResult.hadiths ?? (searchResult.hadith ? [searchResult.hadith] : [])).filter(
+                  (h) => typeof h.metadata?.reference === "string" && h.metadata.reference.trim() !== ""
+                );
+                const hasQuran = Boolean(searchResult.quran?.content && (typeof searchResult.quran.metadata?.reference === "string" || typeof searchResult.quran.metadata?.surah === "string"));
+                const sourceCount = (searchResult.name ? 1 : 0) + hadithList.length + (hasQuran ? 1 : 0);
+                if (sourceCount === 0) return null;
+                return (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="font-github text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                    onClick={() => setSourcesPopupOpen(true)}
+                  >
+                    Sources ({sourceCount})
+                  </Button>
+                );
+              })()}
               {refineError && (
                 <p className="w-full -mt-1 text-sm text-red-600 dark:text-red-400 font-github">{refineError}</p>
               )}
@@ -1828,7 +1865,7 @@ export default function Home() {
                 hadithSources={shareHadithSources}
               />
             </div>
-            <section className="mt-6 w-full rounded-2xl border border-slate-200/60 dark:border-slate-500/30 bg-slate-50/95 dark:bg-slate-800/60 backdrop-blur-xl p-4 sm:p-5 shadow-[0_2px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_24px_rgba(0,0,0,0.25)]">
+            <section className="mt-6 w-full rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-surface p-4 sm:p-5 shadow-[0_2px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_24px_rgba(0,0,0,0.25)]">
               <h2 className="mb-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider font-github">Refined du'a</h2>
               {query.trim() && (
                 <p className="mb-3 text-xs text-slate-500 dark:text-slate-400 font-github italic">From: &ldquo;{query.trim()}&rdquo;</p>
@@ -1837,7 +1874,7 @@ export default function Home() {
                 ref={refinedContentRef}
                 onMouseUp={updateRefinedSelection}
                 onKeyUp={updateRefinedSelection}
-                className="rounded-xl bg-slate-100/80 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-600/40 p-4 sm:p-5 text-slate-800 dark:text-slate-200 font-calligraphy text-lg refined-dua-markdown"
+                className="rounded-xl bg-slate-100/80 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/60 p-4 sm:p-5 text-slate-800 dark:text-slate-200 font-calligraphy text-lg refined-dua-markdown"
               >
                 <ReactMarkdown
                   components={{
@@ -1863,7 +1900,7 @@ export default function Home() {
                   Add to favorites
                 </Button>
                 <Button
-                  className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  className="font-github border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                   variant="outline"
                   size="sm"
                   onClick={handleSaveToLibrary}
@@ -1872,7 +1909,7 @@ export default function Home() {
                   {saved ? "Saved to Library" : "Save to Library"}
                 </Button>
                 <Button
-                  className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  className="font-github border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                   variant="outline"
                   size="sm"
                   onClick={handleSaveSelectionToLibrary}
@@ -1881,7 +1918,7 @@ export default function Home() {
                   {savedSelectionFeedback ? "Saved selection to Library" : "Save selection to Library"}
                 </Button>
                 <Button
-                  className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  className="font-github border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                   variant="outline"
                   size="sm"
                   onClick={openShareModal}
@@ -1907,7 +1944,7 @@ export default function Home() {
           onClick={() => !importSuccess && setImportModalOpen(false)}
         >
           <div
-            className="relative w-full max-w-md rounded-t-2xl sm:rounded-2xl border border-slate-200/60 dark:border-slate-500/30 bg-white/95 dark:bg-slate-900/95 p-4 sm:p-6 shadow-[0_4px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_32px_rgba(0,0,0,0.4)] max-h-[85dvh] overflow-y-auto backdrop-blur-xl pt-[env(safe-area-inset-top)]"
+            className="relative w-full max-w-md rounded-t-2xl sm:rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-surface p-4 sm:p-6 shadow-[0_4px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_32px_rgba(0,0,0,0.4)] max-h-[85dvh] overflow-y-auto pt-[env(safe-area-inset-top)]"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -1972,7 +2009,7 @@ export default function Home() {
           onClick={() => setListShareModalOpen(false)}
         >
           <div
-            className="relative w-full max-w-sm rounded-t-2xl sm:rounded-2xl border border-slate-200/60 dark:border-slate-500/30 bg-white/95 dark:bg-slate-900/95 p-4 sm:p-6 shadow-[0_4px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl pt-[env(safe-area-inset-top)]"
+            className="relative w-full max-w-sm rounded-t-2xl sm:rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-surface p-4 sm:p-6 shadow-[0_4px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_32px_rgba(0,0,0,0.4)] pt-[env(safe-area-inset-top)]"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -1999,7 +2036,7 @@ export default function Home() {
               <Button
                 variant="outline"
                 size="sm"
-                className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="font-github border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
                 onClick={() => void handleListNativeShare()}
               >
                 {listShareFeedback === "shared" ? "Shared" : "Share…"}
@@ -2007,7 +2044,7 @@ export default function Home() {
               <Button
                 variant="outline"
                 size="sm"
-                className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="font-github border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
                 onClick={() => void handleListCopyCode()}
               >
                 Copy code
@@ -2015,7 +2052,7 @@ export default function Home() {
               <Button
                 variant="outline"
                 size="sm"
-                className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="font-github border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
                 onClick={() => void handleExportToNotes()}
               >
                 {exportToNotesFeedback || "Export .txt"}
@@ -2023,7 +2060,7 @@ export default function Home() {
               <Button
                 variant="outline"
                 size="sm"
-                className="col-span-2 font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="col-span-2 font-github border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
                 onClick={handleDownloadLibraryJson}
               >
                 {shareForDuaOSFeedback || "Download JSON"}
@@ -2043,7 +2080,7 @@ export default function Home() {
           onClick={() => setRequestModalOpen(false)}
         >
           <div
-            className="relative w-full max-w-sm rounded-t-2xl sm:rounded-2xl border border-slate-200/60 dark:border-slate-500/30 bg-white/95 dark:bg-slate-900/95 p-4 sm:p-6 shadow-[0_4px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl pt-[env(safe-area-inset-top)]"
+            className="relative w-full max-w-sm rounded-t-2xl sm:rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-surface p-4 sm:p-6 shadow-[0_4px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_32px_rgba(0,0,0,0.4)] pt-[env(safe-area-inset-top)]"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -2062,7 +2099,7 @@ export default function Home() {
                   onChange={(e) => setRequestText(e.target.value.slice(0, 500))}
                   placeholder="What do you need du'a for?"
                   maxLength={500}
-                  className="w-full h-24 rounded-lg border border-slate-200/80 dark:border-slate-500/50 bg-slate-50/80 dark:bg-slate-900/50 text-slate-800 dark:text-slate-200 font-github text-sm p-3 resize-y placeholder:text-slate-500"
+                  className="w-full h-24 rounded-lg border border-slate-200 dark:border-slate-700/60 bg-slate-50/80 dark:bg-slate-900/50 text-slate-800 dark:text-slate-200 font-github text-sm p-3 resize-y placeholder:text-slate-500"
                   aria-label="What do you need du'a for?"
                 />
                 <input
@@ -2070,7 +2107,7 @@ export default function Home() {
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value.slice(0, 80))}
                   placeholder="Your name (optional)"
-                  className="mt-2 w-full rounded-lg border border-slate-200/80 dark:border-slate-500/50 bg-slate-50/80 dark:bg-slate-900/50 text-slate-800 dark:text-slate-200 font-github text-sm px-3 py-2 placeholder:text-slate-500"
+                  className="mt-2 w-full rounded-lg border border-slate-200 dark:border-slate-700/60 bg-slate-50/80 dark:bg-slate-900/50 text-slate-800 dark:text-slate-200 font-github text-sm px-3 py-2 placeholder:text-slate-500"
                   aria-label="Your name (optional)"
                 />
                 <Button
@@ -2087,7 +2124,7 @@ export default function Home() {
             ) : (
               <>
                 <p className="text-xs text-slate-500 dark:text-slate-400 font-github mb-2">Your request link:</p>
-                <p className="rounded-lg border border-slate-200/80 dark:border-slate-500/50 bg-slate-50/80 dark:bg-slate-900/50 p-3 text-xs font-github text-slate-700 dark:text-slate-300 break-all select-all">
+                <p className="rounded-lg border border-slate-200 dark:border-slate-700/60 bg-slate-50/80 dark:bg-slate-900/50 p-3 text-xs font-github text-slate-700 dark:text-slate-300 break-all select-all">
                   {createdRequestLink}
                 </p>
                 <div className="mt-3 grid grid-cols-3 gap-2">
@@ -2105,7 +2142,7 @@ export default function Home() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
+                    className="font-github border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
                     onClick={() => {
                       void (async () => {
                         try {
@@ -2127,7 +2164,7 @@ export default function Home() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
+                    className="font-github border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
                     onClick={() => {
                       if (createdRequestCode) {
                         void navigator.clipboard.writeText(createdRequestCode).then(() => setRequestFeedback("req-code"));
@@ -2141,7 +2178,7 @@ export default function Home() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="mt-3 w-full font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
+                  className="mt-3 w-full font-github border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 justify-center hover:bg-slate-100 dark:hover:bg-slate-800"
                   onClick={() => setRequestModalOpen(false)}
                 >
                   Done

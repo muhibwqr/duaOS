@@ -29,9 +29,9 @@ const curatedEntry = (c: Curated): LibraryEntry => ({
 });
 
 const cardCls =
-  "rounded-2xl border border-slate-200/60 dark:border-slate-500/30 bg-white/90 dark:bg-slate-800/50 backdrop-blur-xl shadow-[0_2px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_24px_rgba(0,0,0,0.25)]";
+  "rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-surface shadow-[0_2px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_24px_rgba(0,0,0,0.25)]";
 const actionBtn =
-  "font-github border-slate-200/80 dark:border-slate-500/50 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800";
+  "font-github border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800";
 
 export default function UmrahClient() {
   const [list, setList] = useState<DuaList | null>(null);
@@ -164,7 +164,7 @@ export default function UmrahClient() {
           <p className="font-github text-sm text-slate-500 dark:text-slate-400 mb-1">
             Collect du&apos;as from friends and carry them with you.
           </p>
-          <p className="font-github text-xs text-slate-400 dark:text-slate-500">
+          <p className="font-github text-xs text-slate-400 dark:text-slate-400">
             {items.length} du&apos;a{items.length === 1 ? "" : "s"} · {fromFriends} from friends · {items.filter((i) => done.includes(normalizeDuaText(i.dua))).length} made
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
@@ -190,7 +190,7 @@ export default function UmrahClient() {
             onClick={() => setAskOpen(false)}
           >
             <div
-              className="relative w-full max-w-sm rounded-t-2xl sm:rounded-2xl border border-slate-200/60 dark:border-slate-500/30 bg-white/95 dark:bg-slate-900/95 p-4 sm:p-6 backdrop-blur-xl"
+              className="relative w-full max-w-sm rounded-t-2xl sm:rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-surface p-4 sm:p-6"
               onClick={(e) => e.stopPropagation()}
             >
               <button type="button" onClick={() => setAskOpen(false)} className="absolute top-3 right-3 p-1.5 rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Close">
@@ -205,10 +205,10 @@ export default function UmrahClient() {
                 value={toName}
                 onChange={(e) => setToName(e.target.value.slice(0, 40))}
                 placeholder="Your name (optional)"
-                className="w-full rounded-lg border border-slate-200/80 dark:border-slate-500/50 bg-slate-50/80 dark:bg-slate-900/50 text-slate-800 dark:text-slate-200 font-github text-sm px-3 py-2 placeholder:text-slate-500"
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-700/60 bg-slate-50/80 dark:bg-slate-900/50 text-slate-800 dark:text-slate-200 font-github text-sm px-3 py-2 placeholder:text-slate-500"
                 aria-label="Your name (optional)"
               />
-              <p className="mt-3 rounded-lg border border-slate-200/80 dark:border-slate-500/50 bg-slate-50/80 dark:bg-slate-900/50 p-3 text-xs font-github text-slate-700 dark:text-slate-300 break-all select-all">
+              <p className="mt-3 rounded-lg border border-slate-200 dark:border-slate-700/60 bg-slate-50/80 dark:bg-slate-900/50 p-3 text-xs font-github text-slate-700 dark:text-slate-300 break-all select-all">
                 {collectLink}
               </p>
               <div className="mt-3 grid grid-cols-2 gap-2">
@@ -247,15 +247,16 @@ export default function UmrahClient() {
         )}
 
         {/* Paste box */}
-        <section className={`${cardCls} p-4 sm:p-6 mb-8`} aria-label="Add du'as someone sent you">
+        <section className="mb-8" aria-label="Received du'as">
           <h2 className="font-github text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
-            Add du&apos;as someone sent you
+            Received du&apos;as
           </h2>
+          <div className={`${cardCls} p-4 sm:p-6`}>
           <textarea
             value={pasteInput}
             onChange={(e) => { setPasteInput(e.target.value); setImportErr(null); }}
             placeholder="Paste a du'aOS link or code…"
-            className="w-full h-20 rounded-lg border border-slate-200/80 dark:border-slate-500/50 bg-slate-50/80 dark:bg-slate-900/50 text-slate-800 dark:text-slate-200 font-github text-sm p-3 resize-y placeholder:text-slate-500"
+            className="w-full h-20 rounded-lg border border-slate-200 dark:border-slate-700/60 bg-slate-50/80 dark:bg-slate-900/50 text-slate-800 dark:text-slate-200 font-github text-sm p-3 resize-y placeholder:text-slate-500"
             aria-label="Paste a du'aOS link or code"
           />
           {importErr && <p className="mt-2 text-sm text-red-600 dark:text-red-400 font-github">{importErr}</p>}
@@ -273,6 +274,7 @@ export default function UmrahClient() {
           >
             Add to my Umrah list
           </Button>
+          </div>
         </section>
 
         {/* My list */}
@@ -329,7 +331,7 @@ export default function UmrahClient() {
                           setList(removeFromUmrahList(item.dua));
                           setDone(getUmrahDone());
                         }}
-                        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 dark:hover:bg-red-500/20"
+                        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-github text-slate-400 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 dark:hover:bg-red-500/20"
                         aria-label="Remove"
                       >
                         <Trash2 className="size-3.5" />
@@ -374,7 +376,7 @@ export default function UmrahClient() {
                         </p>
                         <p className="mt-2 font-serif text-sm italic text-slate-500 dark:text-slate-400">{c.transliteration}</p>
                         <p className="mt-1 font-serif text-sm text-slate-700 dark:text-slate-300">{c.translation}</p>
-                        <p className="mt-2 font-github text-xs text-slate-400 dark:text-slate-500">{c.source}</p>
+                        <p className="mt-2 font-github text-xs text-slate-400 dark:text-slate-400">{c.source}</p>
                         <div className="mt-3">
                           <button
                             type="button"

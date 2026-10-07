@@ -41,7 +41,7 @@ export function LeaderboardList() {
 
   return (
     <div className="space-y-10">
-      <section className="rounded-2xl border border-slate-200/60 dark:border-slate-500/30 bg-white/90 dark:bg-slate-800/50 backdrop-blur-xl p-4 sm:p-6 shadow-[0_2px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_24px_rgba(0,0,0,0.25)]">
+      <section className="rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-surface p-4 sm:p-6 shadow-[0_2px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_24px_rgba(0,0,0,0.25)]">
         {entries === null && !error && (
           <ul className="space-y-3" aria-label="Loading leaderboard">
             {Array.from({ length: 8 }).map((_, i) => (
@@ -72,7 +72,7 @@ export function LeaderboardList() {
                   key={e.name}
                   className={`flex items-center gap-4 py-3 ${i < 3 ? "bg-emerald-500/[0.04] dark:bg-emerald-500/[0.06]" : ""}`}
                 >
-                  <span className="w-7 text-right font-github text-sm tabular-nums text-slate-400 dark:text-slate-500 shrink-0">
+                  <span className="w-7 text-right font-github text-sm tabular-nums text-slate-400 dark:text-slate-400 shrink-0">
                     {i + 1}
                   </span>
                   <div className="flex-1 min-w-0">
@@ -104,7 +104,7 @@ export function LeaderboardList() {
         )}
       </section>
 
-      <section className="rounded-2xl border border-slate-200/60 dark:border-slate-500/30 bg-white/90 dark:bg-slate-800/50 backdrop-blur-xl p-4 sm:p-6 shadow-[0_2px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_24px_rgba(0,0,0,0.25)]">
+      <section className="rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-surface p-4 sm:p-6 shadow-[0_2px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_24px_rgba(0,0,0,0.25)]">
         <h2 className="font-serif text-lg font-medium text-slate-800 dark:text-slate-100 mb-4">Your du&apos;as</h2>
         {stats ? (
           <dl className="space-y-3 font-github text-sm">
@@ -112,20 +112,15 @@ export function LeaderboardList() {
               <dt className="text-slate-500 dark:text-slate-400">Saved du&apos;as</dt>
               <dd className="tabular-nums text-slate-800 dark:text-slate-200">{stats.saved}</dd>
             </div>
-            <div>
-              <dt className="text-slate-500 dark:text-slate-400 mb-1">Names you invoked most</dt>
-              <dd>
+            <div className="flex justify-between gap-4">
+              <dt className="text-slate-500 dark:text-slate-400 shrink-0">Names you invoked most</dt>
+              <dd className="min-w-0 text-right">
                 {stats.top.length === 0 ? (
-                  <span className="text-slate-400 dark:text-slate-500">None yet</span>
+                  <span className="text-slate-400">None yet</span>
                 ) : (
-                  <ul className="space-y-1">
-                    {stats.top.map(([name, count]) => (
-                      <li key={name} className="flex justify-between text-slate-700 dark:text-slate-300">
-                        <span className="truncate">{name}</span>
-                        <span className="tabular-nums text-slate-500 dark:text-slate-400">{count}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <span className="block truncate tabular-nums text-slate-700 dark:text-slate-300">
+                    {stats.top.map(([name, count]) => `${name} ${count}`).join(" · ")}
+                  </span>
                 )}
               </dd>
             </div>
