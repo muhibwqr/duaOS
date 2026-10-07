@@ -118,6 +118,19 @@ describe("state payload", () => {
     expect(await decodeSharePayload(await encodeSharePayload(payload))).toEqual(payload);
   });
 
+  it("roundtrips from on items and umrah flag", async () => {
+    const payload: SharePayload = {
+      v: 1,
+      kind: "list",
+      title: "Du'as for Muhib",
+      umrah: true,
+      items: [{ dua: "Ya Allah keep him safe", from: "Amina", at: "2026-01-01T00:00:00.000Z" }],
+    };
+    expect(await decodeSharePayload(await encodeSharePayload(payload))).toEqual(payload);
+    const bad = `j.${btoa(JSON.stringify({ v: 1, kind: "list", umrah: "yes", items: [{ dua: "x" }] })).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")}`;
+    expect(await decodeSharePayload(bad)).toBeNull();
+  });
+
   it("rejects malformed state", async () => {
     const bad = `j.${btoa(JSON.stringify({ v: 1, kind: "state", library: [], favorites: [], lists: [{ title: "no id", items: [] }], requests: [] })).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")}`;
     expect(await decodeSharePayload(bad)).toBeNull();

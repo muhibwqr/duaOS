@@ -61,6 +61,7 @@ export function buildSharePreview(p: SharePayload): SharePreview {
   }
 
   const description = truncate(
+    (p.kind === "list" && p.umrah ? "Du'as for your Umrah · " : "") +
     lines
       .map((l) => {
         const english = l.name ? parseNameContent(l.name).english : "";

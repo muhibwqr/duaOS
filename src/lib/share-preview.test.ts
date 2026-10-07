@@ -50,6 +50,13 @@ describe("buildSharePreview", () => {
     expect(r.description).toContain("…");
   });
 
+  it("umrah list description gets prefix", () => {
+    const p: SharePayload = { v: 1, kind: "list", title: "Du'as for Muhib", umrah: true, items: [{ dua: "stay safe" }] };
+    const r = buildSharePreview(p);
+    expect(r.title).toBe("Du'as for Muhib · 1 du'a · du'aOS");
+    expect(r.description.startsWith("Du'as for your Umrah · ")).toBe(true);
+  });
+
   it("request stays generic", () => {
     const p: SharePayload = { v: 1, kind: "request", request: { id: "r", text: "secret ask", at: "t" } };
     const r = buildSharePreview(p);

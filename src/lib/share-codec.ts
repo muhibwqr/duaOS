@@ -8,14 +8,14 @@
 
 export const SHARE_VERSION = 1;
 
-export type SharedDua = { dua: string; name?: string; sources?: string[]; at?: string };
+export type SharedDua = { dua: string; name?: string; from?: string; sources?: string[]; at?: string };
 export type SharedRequest = { id: string; text: string; name?: string; from?: string; at: string };
 
 export type SharedList = { id: string; title: string; items: SharedDua[]; at?: string };
 
 export type SharePayload =
   | { v: 1; kind: "dua"; item: SharedDua }
-  | { v: 1; kind: "list"; id?: string; title?: string; items: SharedDua[] }
+  | { v: 1; kind: "list"; id?: string; title?: string; umrah?: boolean; items: SharedDua[] }
   | { v: 1; kind: "request"; request: SharedRequest }
   | {
       v: 1;
@@ -60,6 +60,7 @@ function isSharedDua(d: unknown): d is SharedDua {
   const o = d as Record<string, unknown>;
   if (typeof o.dua !== "string" || !o.dua.trim()) return false;
   if (o.name !== undefined && typeof o.name !== "string") return false;
+  if (o.from !== undefined && typeof o.from !== "string") return false;
   if (o.at !== undefined && typeof o.at !== "string") return false;
   if (o.sources !== undefined && !(Array.isArray(o.sources) && o.sources.every((s) => typeof s === "string"))) return false;
   return true;
@@ -93,6 +94,7 @@ function isSharePayload(p: unknown): p is SharePayload {
   if (o.kind === "list") {
     if (o.title !== undefined && typeof o.title !== "string") return false;
     if (o.id !== undefined && typeof o.id !== "string") return false;
+    if (o.umrah !== undefined && typeof o.umrah !== "boolean") return false;
     return Array.isArray(o.items) && o.items.length > 0 && o.items.every(isSharedDua);
   }
   if (o.kind === "request") return isSharedRequest(o.request);
@@ -128,9 +130,13 @@ export function extractShareCode(input: string): string | null {
   return null;
 }
 
-export function buildShareUrl(code: string, opts?: { origin?: string; mode?: "hash" | "query" }): string {
+export function buildShareUrl(
+  code: string,
+  opts?: { origin?: string; mode?: "hash" | "query"; path?: string }
+): string {
   const base = opts?.origin ?? (typeof window !== "undefined" ? window.location.origin : "");
-  return opts?.mode === "query" ? `${base}/s?c=${code}` : `${base}/s#${code}`;
+  const path = opts?.path ?? "/s";
+  return opts?.mode === "query" ? `${base}${path}?c=${code}` : `${base}${path}#${code}`;
 }
 
 export async function encodeSharePayload(p: SharePayload): Promise<string> {

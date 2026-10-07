@@ -12,7 +12,7 @@ export type SearchResult = {
   quranVerses?: SearchResultItem[];
 };
 
-export type LibraryEntry = { dua: string; name?: string; at: string };
+export type LibraryEntry = { dua: string; name?: string; from?: string; at: string };
 
 export type FavoriteItem = {
   id: string;
@@ -22,7 +22,7 @@ export type FavoriteItem = {
   addedAt: string;
 };
 
-export type DuaList = { id: string; title: string; items: LibraryEntry[]; at: string };
+export type DuaList = { id: string; title: string; items: LibraryEntry[]; at: string; umrah?: boolean };
 
 export type DuaRequest = {
   id: string;

@@ -176,7 +176,7 @@ export function markRequestMade(id: string): DuaRequest[] {
 }
 
 /** Normalize du'a text for dedupe: trim, collapse whitespace, lowercase. */
-function normalizeDuaText(s: string): string {
+export function normalizeDuaText(s: string): string {
   return s.replace(/\s+/g, " ").trim().toLowerCase();
 }
 
@@ -217,7 +217,7 @@ export function addToList(id: string, entry: LibraryEntry): DuaList[] {
   if (!target) return lists;
   const key = normalizeDuaText(entry.dua);
   if (!target.items.some((i) => normalizeDuaText(i.dua) === key)) {
-    target.items = [...target.items, { dua: entry.dua, name: entry.name, at: entry.at || new Date().toISOString() }];
+    target.items = [...target.items, { dua: entry.dua, name: entry.name, from: entry.from, at: entry.at || new Date().toISOString() }];
     setLists(lists);
   }
   return lists;
@@ -250,7 +250,7 @@ export async function parseDuaOSImportAsync(raw: string): Promise<ParsedImport |
     if (payload.kind === "dua") {
       return {
         type: "entries",
-        entries: [{ dua: payload.item.dua.trim(), name: payload.item.name?.trim() || undefined, at: payload.item.at || now }],
+        entries: [{ dua: payload.item.dua.trim(), name: payload.item.name?.trim() || undefined, from: payload.item.from?.trim() || undefined, at: payload.item.at || now }],
       };
     }
     if (payload.kind === "list") {
@@ -260,25 +260,26 @@ export async function parseDuaOSImportAsync(raw: string): Promise<ParsedImport |
           list: {
             id: payload.id,
             title: payload.title?.trim() || "Shared list",
-            items: payload.items.map((i) => ({ dua: i.dua.trim(), name: i.name?.trim() || undefined, at: i.at || now })),
+            umrah: payload.umrah,
+            items: payload.items.map((i) => ({ dua: i.dua.trim(), name: i.name?.trim() || undefined, from: i.from?.trim() || undefined, at: i.at || now })),
             at: now,
           },
         };
       }
       return {
         type: "entries",
-        entries: payload.items.map((i) => ({ dua: i.dua.trim(), name: i.name?.trim() || undefined, at: i.at || now })),
+        entries: payload.items.map((i) => ({ dua: i.dua.trim(), name: i.name?.trim() || undefined, from: i.from?.trim() || undefined, at: i.at || now })),
       };
     }
     if (payload.kind === "state") {
       return {
         type: "state",
-        library: payload.library.map((i) => ({ dua: i.dua.trim(), name: i.name?.trim() || undefined, at: i.at || now })),
+        library: payload.library.map((i) => ({ dua: i.dua.trim(), name: i.name?.trim() || undefined, from: i.from?.trim() || undefined, at: i.at || now })),
         favorites: payload.favorites.map((i) => ({ dua: i.dua.trim(), nameOfAllah: i.name?.trim() || undefined })),
         lists: payload.lists.map((l) => ({
           id: l.id,
           title: l.title,
-          items: l.items.map((i) => ({ dua: i.dua.trim(), name: i.name?.trim() || undefined, at: i.at || now })),
+          items: l.items.map((i) => ({ dua: i.dua.trim(), name: i.name?.trim() || undefined, from: i.from?.trim() || undefined, at: i.at || now })),
           at: l.at || now,
         })),
         requests: payload.requests.map((r) => ({ ...r, direction: "received" as const })),
@@ -299,9 +300,14 @@ export function mergeLibraryDeduped(entries: LibraryEntry[]): number {
   let added = 0;
   for (const e of entries) {
     const key = normalizeDuaText(e.dua);
-    if (seen.has(key)) continue;
+    const existing = list.find((x) => normalizeDuaText(x.dua) === key);
+    if (existing) {
+      if (!existing.name && e.name) existing.name = e.name;
+      if (!existing.from && e.from) existing.from = e.from;
+      continue;
+    }
     seen.add(key);
-    list.push({ dua: e.dua, name: e.name, at: e.at || now });
+    list.push({ dua: e.dua, name: e.name, from: e.from, at: e.at || now });
     added++;
   }
   localStorage.setItem(LIBRARY_KEY, JSON.stringify(list));
@@ -346,12 +352,12 @@ export function buildStatePayload(): SharePayload {
   return {
     v: 1,
     kind: "state",
-    library: getLibrary().map((e) => ({ dua: e.dua, name: e.name, at: e.at })),
+    library: getLibrary().map((e) => ({ dua: e.dua, name: e.name, from: e.from, at: e.at })),
     favorites: getFavorites().map((f) => ({ dua: f.dua, name: f.nameOfAllah, at: f.addedAt })),
     lists: getLists().map((l) => ({
       id: l.id,
       title: l.title,
-      items: l.items.map((i) => ({ dua: i.dua, name: i.name, at: i.at || now })),
+      items: l.items.map((i) => ({ dua: i.dua, name: i.name, from: i.from, at: i.at || now })),
       at: l.at,
     })),
     requests: getRequests().map((r) => ({
@@ -367,4 +373,77 @@ export function buildStatePayload(): SharePayload {
 /** Merge entries into the library, deduped by normalized text. Returns count actually added. */
 export function mergeIntoLibrary(entries: LibraryEntry[]): number {
   return mergeLibraryDeduped(entries);
+}
+
+/* ---------- Umrah list ---------- */
+
+export const UMRAH_LIST_ID = "umrah";
+export const UMRAH_LIST_TITLE = "My Umrah du'as";
+export const UMRAH_DONE_KEY = "duaos-umrah-done";
+
+/** The Umrah list: a DuaList with fixed id. Creates an empty in-memory one if missing. */
+export function getUmrahList(): DuaList {
+  return (
+    getLists().find((l) => l.id === UMRAH_LIST_ID) ?? {
+      id: UMRAH_LIST_ID,
+      title: UMRAH_LIST_TITLE,
+      items: [],
+      at: new Date().toISOString(),
+      umrah: true,
+    }
+  );
+}
+
+/** Merge items into the Umrah list, deduped by normalized text. Fills missing name/from on existing. */
+export function addToUmrahList(items: LibraryEntry[]): { added: number; skipped: number } {
+  const list = getUmrahList();
+  const seen = new Set(list.items.map((i) => normalizeDuaText(i.dua)));
+  const now = new Date().toISOString();
+  let added = 0;
+  for (const e of items) {
+    const key = normalizeDuaText(e.dua);
+    if (!key) continue;
+    const existing = list.items.find((x) => normalizeDuaText(x.dua) === key);
+    if (existing) {
+      if (!existing.name && e.name) existing.name = e.name;
+      if (!existing.from && e.from) existing.from = e.from;
+      continue;
+    }
+    seen.add(key);
+    list.items.push({ dua: e.dua, name: e.name, from: e.from, at: e.at || now });
+    added++;
+  }
+  upsertList({ ...list, umrah: true });
+  return { added, skipped: items.length - added };
+}
+
+export function removeFromUmrahList(dua: string): DuaList {
+  const list = getUmrahList();
+  const key = normalizeDuaText(dua);
+  list.items = list.items.filter((i) => normalizeDuaText(i.dua) !== key);
+  upsertList(list);
+  return list;
+}
+
+export function getUmrahDone(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(UMRAH_DONE_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list.filter((s) => typeof s === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+export function toggleUmrahDone(dua: string): string[] {
+  const key = normalizeDuaText(dua);
+  const done = getUmrahDone();
+  const next = done.includes(key) ? done.filter((k) => k !== key) : [...done, key];
+  try {
+    if (typeof window !== "undefined") localStorage.setItem(UMRAH_DONE_KEY, JSON.stringify(next));
+  } catch (e) {
+    console.error("Set umrah done failed", e);
+  }
+  return next;
 }
