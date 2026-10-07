@@ -24,6 +24,16 @@ export type FavoriteItem = {
 
 export type DuaList = { id: string; title: string; items: LibraryEntry[]; at: string; umrah?: boolean };
 
+export type HistoryEntry = {
+  id: string;
+  query: string;
+  intent: Intent;
+  edition?: string;
+  at: string;
+  result: SearchResult;
+  refinedDua?: string;
+};
+
 export type DuaRequest = {
   id: string;
   text: string;

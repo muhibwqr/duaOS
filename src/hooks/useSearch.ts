@@ -11,7 +11,8 @@ const namesList = namesOfAllah as { arabic: string; english: string; meaning: st
 export function useSearch(
   setSearchResult: (r: SearchResult | null) => void,
   setRefinedDua: (s: string) => void,
-  setUsedFailsafe: (b: boolean) => void
+  setUsedFailsafe: (b: boolean) => void,
+  onResult?: (r: SearchResult, q: string, intent: string, edition: string) => void
 ): {
   handleSearch: (query: string, intent: string, edition: string) => Promise<void>;
   isSearching: boolean;
@@ -53,24 +54,28 @@ export function useSearch(
         const hadithList = Array.isArray(data.hadiths) ? data.hadiths : data.hadith ? [data.hadith] : [];
         const quranList = Array.isArray(data.quranVerses) ? data.quranVerses : data.quran ? [data.quran] : [];
         setUsedFailsafe(true);
-        setSearchResult({
+        const result: SearchResult = {
           name: data.name ?? local?.name ?? null,
           hadith: data.hadith ?? hadithList[0] ?? null,
           hadiths: hadithList,
           quran: data.quran ?? null,
           quranVerses: quranList,
-        });
+        };
+        setSearchResult(result);
+        onResult?.(result, q, intent, edition);
       } catch (e) {
         console.error(e);
         if (local) {
           setUsedFailsafe(false);
           setSearchError("Search service unavailable. Showing local Name match.");
-          setSearchResult({
+          const result: SearchResult = {
             name: local.name,
             hadith: local.hadith,
             hadiths: [],
             quran: local.quran ?? null,
-          });
+          };
+          setSearchResult(result);
+          onResult?.(result, q, intent, edition);
         } else {
           setSearchError(e instanceof Error ? e.message : "Search failed. Check your connection and try again.");
           setSearchResult({ name: null, hadith: null, hadiths: [] });
@@ -79,7 +84,7 @@ export function useSearch(
         setIsSearching(false);
       }
     },
-    [setSearchResult, setRefinedDua, setUsedFailsafe]
+    [setSearchResult, setRefinedDua, setUsedFailsafe, onResult]
   );
 
   return { handleSearch, isSearching, searchError, setSearchError };

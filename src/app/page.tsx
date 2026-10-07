@@ -34,6 +34,11 @@ import {
   applyState,
   buildStatePayload,
   DISPLAY_NAME_KEY,
+  getHistory,
+  addHistory,
+  updateHistoryRefined,
+  removeHistory,
+  clearHistory,
 } from "@/lib/library-storage";
 import {
   encodeSharePayload,
@@ -44,7 +49,7 @@ import {
 import { localMatch } from "@/lib/local-match";
 import { parseNameContent } from "@/lib/share-preview";
 import namesOfAllah from "@/data/names-of-allah.json";
-import type { Intent, SearchResult, SearchResultItem, LibraryEntry, FavoriteItem, DuaRequest, DuaList } from "@/types/dua";
+import type { Intent, SearchResult, SearchResultItem, LibraryEntry, FavoriteItem, DuaRequest, DuaList, HistoryEntry } from "@/types/dua";
 
 const namesList = namesOfAllah as { arabic: string; english: string; meaning: string; tags: string[] }[];
 
@@ -83,6 +88,19 @@ const MAX_REFINE_INPUT_LENGTH = 5000;
 const MAX_CONTEXT_LENGTH = 2000;
 const ARABIC_TEXT_RE = /[\u0600-\u06FF]/;
 
+function relativeTime(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "";
+  const mins = Math.floor((Date.now() - then) / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
 /** Fire-and-forget: store du'a on server for counter and similarity. Does not block UI. */
 function storeDuaOnServer(payload: {
   content: string;
@@ -110,11 +128,23 @@ export default function Home() {
   const [suggestionIndex, setSuggestionIndex] = useState(0);
   const [placeholderVisible, setPlaceholderVisible] = useState(true);
   const [usedFailsafe, setUsedFailsafe] = useState(false);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [currentHistoryId, setCurrentHistoryId] = useState<string | null>(null);
 
   const { handleSearch, isSearching, searchError, setSearchError } = useSearch(
     setSearchResult,
     setRefinedDua,
-    setUsedFailsafe
+    setUsedFailsafe,
+    (r, q, intentValue, editionValue) => {
+      const h = addHistory({
+        query: q,
+        intent: (intentValue as Intent) || "problem",
+        edition: editionValue || undefined,
+        result: r,
+      });
+      setCurrentHistoryId(h.id);
+      setHistory(getHistory());
+    }
   );
   const { handleRefine, isRefining, refineError } = useRefine(setRefinedDua, setSaved);
 
@@ -178,6 +208,7 @@ export default function Home() {
     setFavoritesState(getFavorites());
     setRequests(getRequests());
     setLists(getLists());
+    setHistory(getHistory());
     try {
       setDisplayName(localStorage.getItem(DISPLAY_NAME_KEY) ?? "");
     } catch {
@@ -228,6 +259,13 @@ export default function Home() {
     if (searchResult !== null) setSourcesPopupOpen(true);
   }, [searchResult]);
 
+  // Persist the refined du'a onto the history entry it was produced from.
+  useEffect(() => {
+    if (refinedDua.trim() && currentHistoryId) {
+      setHistory(updateHistoryRefined(currentHistoryId, refinedDua));
+    }
+  }, [refinedDua, currentHistoryId]);
+
   useEffect(() => {
     try {
       localStorage.setItem(HADITH_EDITION_STORAGE_KEY, edition);
@@ -254,6 +292,18 @@ export default function Home() {
     if (!q) return;
     if (overrideQuery) setQuery(overrideQuery);
     void handleSearch(overrideQuery ?? query, intent, edition);
+  }
+
+  function openHistory(h: HistoryEntry) {
+    setQuery(h.query);
+    setIntent(h.intent);
+    if (h.edition) setEdition(h.edition);
+    setSearchResult(h.result);
+    setRefinedDua(h.refinedDua ?? "");
+    setSaved(false);
+    setCurrentHistoryId(h.id);
+    setFavoritesPanelOpen(false);
+    window.scrollTo({ top: 0 });
   }
 
   function isArabicText(text: string): boolean {
@@ -1131,6 +1181,63 @@ export default function Home() {
               </div>
             </div>
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-8">
+              {/* Recent searches */}
+              <section aria-label="Recent searches">
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider font-github">Recent</h3>
+                  {history.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        clearHistory();
+                        setHistory([]);
+                        setCurrentHistoryId(null);
+                      }}
+                      className="text-xs font-github text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                {history.length === 0 ? (
+                  <p className="text-sm text-slate-500 dark:text-slate-400 font-github">
+                    Your past searches show up here — they never leave this browser.
+                  </p>
+                ) : (
+                  <ul className="space-y-1">
+                    {history.slice(0, 20).map((h) => (
+                      <li key={h.id} className="group flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => openHistory(h)}
+                          className="flex-1 min-w-0 rounded-lg px-2 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        >
+                          <p className="truncate text-sm font-github text-slate-800 dark:text-slate-200">
+                            {h.refinedDua && <span className="mr-1.5 inline-block size-1.5 rounded-full bg-emerald-500 align-middle" aria-label="Refined" />}
+                            {h.query}
+                          </p>
+                          <p className="mt-0.5 text-xs font-github text-slate-500 dark:text-slate-400">
+                            {h.result.name ? `${parseNameContent(h.result.name.content).english} · ` : ""}
+                            {relativeTime(h.at)}
+                          </p>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setHistory(removeHistory(h.id));
+                            if (currentHistoryId === h.id) setCurrentHistoryId(null);
+                          }}
+                          className="shrink-0 rounded-md p-1.5 text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 dark:hover:bg-red-500/20 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                          aria-label={`Remove "${h.query}" from history`}
+                        >
+                          <X className="size-3.5" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+
               {/* Lists */}
               <section aria-label="Lists">
                 <h3 className="mb-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider font-github">Lists</h3>
@@ -1579,6 +1686,21 @@ export default function Home() {
             </button>
           ))}
         </div>
+        {searchResult === null && !isSearching && history.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+            <span className="text-xs font-github text-slate-400 dark:text-slate-500">recent:</span>
+            {history.slice(0, 4).map((h) => (
+              <button
+                key={h.id}
+                type="button"
+                onClick={() => openHistory(h)}
+                className="rounded-full border border-dashed border-slate-300/80 dark:border-slate-600/50 bg-transparent px-3 py-1.5 text-sm text-slate-500 dark:text-slate-400 font-github hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 transition-colors max-w-[220px] truncate"
+              >
+                {h.query}
+              </button>
+            ))}
+          </div>
+        )}
         <a
           href={MUHIB_URL}
           target="_blank"

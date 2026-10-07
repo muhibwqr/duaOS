@@ -3,7 +3,7 @@
  * Uses localStorage; no auth in MVP.
  */
 
-import type { LibraryEntry, FavoriteItem, DuaRequest, DuaList } from "@/types/dua";
+import type { LibraryEntry, FavoriteItem, DuaRequest, DuaList, HistoryEntry } from "@/types/dua";
 import { extractShareCode, decodeSharePayload, type SharePayload } from "@/lib/share-codec";
 
 export const LIBRARY_KEY = "duaos-library";
@@ -451,4 +451,62 @@ export function toggleUmrahDone(dua: string): string[] {
   const done = getUmrahDone();
   const next = done.includes(key) ? done.filter((k) => k !== key) : [...done, key];
   return setUmrahDone(next);
+}
+
+export const HISTORY_KEY = "duaos-history";
+const MAX_HISTORY_ITEMS = 50;
+
+export function getHistory(): HistoryEntry[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list.filter((h) => h && typeof h.id === "string" && typeof h.query === "string" && h.result != null) : [];
+  } catch {
+    return [];
+  }
+}
+
+function setHistoryList(list: HistoryEntry[]): HistoryEntry[] {
+  try {
+    if (typeof window !== "undefined") localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
+  } catch (e) {
+    console.error("Set history failed", e);
+  }
+  return list;
+}
+
+export function addHistory(entry: Omit<HistoryEntry, "id" | "at">): HistoryEntry {
+  const list = getHistory();
+  const at = new Date().toISOString();
+  const top = list[0];
+  if (top && normalizeDuaText(top.query) === normalizeDuaText(entry.query) && top.intent === entry.intent) {
+    const replaced: HistoryEntry = { ...entry, id: top.id, at };
+    setHistoryList([replaced, ...list.slice(1)]);
+    return replaced;
+  }
+  const h: HistoryEntry = { ...entry, id: crypto.randomUUID(), at };
+  setHistoryList([h, ...list].slice(0, MAX_HISTORY_ITEMS));
+  return h;
+}
+
+export function updateHistoryRefined(id: string, refinedDua: string): HistoryEntry[] {
+  const list = getHistory();
+  const idx = list.findIndex((h) => h.id === id);
+  if (idx === -1) return list;
+  const next = [...list];
+  next[idx] = { ...next[idx], refinedDua };
+  return setHistoryList(next);
+}
+
+export function removeHistory(id: string): HistoryEntry[] {
+  return setHistoryList(getHistory().filter((h) => h.id !== id));
+}
+
+export function clearHistory(): void {
+  try {
+    if (typeof window !== "undefined") localStorage.removeItem(HISTORY_KEY);
+  } catch {
+    // ignore
+  }
 }
