@@ -14,6 +14,7 @@ import {
   markRequestMade,
   getRequests,
   upsertList,
+  addToUmrahList,
   applyState,
   parseDuaOSImportAsync,
 } from "@/lib/library-storage";
@@ -172,7 +173,7 @@ export default function SharedClient() {
               >
                 {feedback.favAll ? "Added" : "Add all to favorites"}
               </Button>
-              {payload.id && (
+              {payload.id && !payload.umrah && (
                 <Button
                   className="font-github bg-emerald-600 hover:bg-emerald-500 text-white border-0"
                   size="sm"
@@ -180,7 +181,7 @@ export default function SharedClient() {
                     upsertList({
                       id: payload.id!,
                       title: payload.title?.trim() || "Shared list",
-                      items: payload.items.map((i) => ({ dua: i.dua, name: i.name, at: i.at || new Date().toISOString() })),
+                      items: payload.items.map((i) => ({ dua: i.dua, name: i.name, from: i.from, at: i.at || new Date().toISOString() })),
                       at: new Date().toISOString(),
                     });
                     flash("saveList");
@@ -188,6 +189,25 @@ export default function SharedClient() {
                 >
                   {feedback.saveList ? "Saved" : "Save as list"}
                 </Button>
+              )}
+              {payload.umrah && (
+                <>
+                  <Button
+                    className="font-github bg-emerald-600 hover:bg-emerald-500 text-white border-0"
+                    size="sm"
+                    onClick={() => {
+                      addToUmrahList(
+                        payload.items.map((i) => ({ dua: i.dua, name: i.name, from: i.from, at: i.at || new Date().toISOString() }))
+                      );
+                      flash("umrahAdd");
+                    }}
+                  >
+                    {feedback.umrahAdd ? "Added to your Umrah list" : "Add to my Umrah list"}
+                  </Button>
+                  <Button variant="outline" size="sm" className={actionBtn} asChild>
+                    <Link href="/umrah">Open my Umrah page</Link>
+                  </Button>
+                </>
               )}
             </div>
             <div className="space-y-4">

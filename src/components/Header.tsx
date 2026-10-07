@@ -61,6 +61,9 @@ export function Header({ favoritesCount = 0, onCartClick }: HeaderProps) {
             <Link href="/leaderboard" className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">
               leaderboard
             </Link>
+            <Link href="/umrah" className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">
+              umrah
+            </Link>
           </nav>
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <button
